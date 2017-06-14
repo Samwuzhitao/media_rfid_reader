@@ -13,7 +13,7 @@ import logging
 import json
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
-from JsonDecode   import *
+from HexDecode   import *
 
 ser           = 0
 input_count   = 0
@@ -33,7 +33,7 @@ class UartListen(QThread):
         super(UartListen,self).__init__(parent)
         self.working       = True
         self.num           = 0
-        self.json_revice   = JsonDecode()
+        self.json_revice   = HexDecode()
         self.ReviceFunSets = { 0:self.decode }
 
     def __del__(self):
@@ -83,22 +83,29 @@ class MEIDIREADER(QWidget):
         self.com_combo=QComboBox(self)
         self.com_combo.setFixedSize(75, 20)
         self.uart_scan(self.ports_dict)
-        self.start_button = QPushButton(u"打开发卡器")
+        self.start_button = QPushButton(u"打开串口")
         self.clear_button = QPushButton(u"清空LOG信息")
         c_hbox = QHBoxLayout()
         c_hbox.addWidget(self.com_combo)
         c_hbox.addWidget(self.start_button)
         c_hbox.addWidget(self.clear_button)
 
-        self.op_label=QLabel(u"操作类型  :")
+        self.op_label=QLabel(u"操作:")
+        self.op_label.setFixedSize(30, 20)
         self.op_combo=QComboBox(self)
-        self.op_combo.addItems([u'0x00:读取UID',u'0x01:写入DES秘钥',
-            u'0x02:读取TAG数据',u'0x03:写入TAG数据'])
-        self.op_label.setFixedSize(65, 20)
-        self.op_button = QPushButton(u"发送指令")
+        self.op_combo.addItems([u'0x0A:读',u'0x0B:写'])
+        self.type_label=QLabel(u"类型:")
+        self.type_label.setFixedSize(30, 20)
+        self.type_combo=QComboBox(self)
+        self.type_combo.addItems([u'0x00:UID',u'0x01:DES秘钥',u'0x02:TAG数据'])
+        self.sync_button = QPushButton(u"同步数据")
+        self.op_button = QPushButton(u"生效数据")
         d_hbox = QHBoxLayout()
         d_hbox.addWidget(self.op_label)
         d_hbox.addWidget(self.op_combo)
+        d_hbox.addWidget(self.type_label)
+        d_hbox.addWidget(self.type_combo)
+        d_hbox.addWidget(self.sync_button)
         d_hbox.addWidget(self.op_button)
         op_frame = QFrame()
         op_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
