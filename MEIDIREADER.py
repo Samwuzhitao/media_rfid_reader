@@ -249,18 +249,24 @@ class MEIDIREADER(QWidget):
 
     def tpye_data_sync(self):
         self.s_cmd.init()
-        r_str = unicode(self.type_combo.currentText())
-        if r_str == u'0x00:UID':
+        r_str  = unicode(self.type_combo.currentText())
+        op_str = unicode(self.op_combo.currentText())
+        if op_str == u'0x0B:写':
+            if r_str == u'0x00:UID':
+                self.get_lineedit_str(self.op_combo             ,5)
+                self.get_lineedit_str(self.type_combo           ,6)
+                self.check_browser.setText(self.s_cmd.get_str()   )
+            if r_str == u'0x01:DES秘钥':
+                self.get_lineedit_str(self.op_combo             ,5)
+                self.get_lineedit_str(self.type_combo           ,6)
+                self.get_lineedit_str(self.des_lineedit         ,7)
+                self.check_browser.setText(self.s_cmd.get_str()   )
+            if r_str == u'0x02:TAG数据':
+                self.tag_data_sync()
+        else:
             self.get_lineedit_str(self.op_combo             ,5)
             self.get_lineedit_str(self.type_combo           ,6)
             self.check_browser.setText(self.s_cmd.get_str()   )
-        if r_str == u'0x01:DES秘钥':
-            self.get_lineedit_str(self.op_combo             ,5)
-            self.get_lineedit_str(self.type_combo           ,6)
-            self.get_lineedit_str(self.des_lineedit         ,7)
-            self.check_browser.setText(self.s_cmd.get_str()   )
-        if r_str == u'0x02:TAG数据':
-            self.tag_data_sync()
   
     def uart_scan(self,dict):
         for i in range(256):
@@ -279,16 +285,38 @@ class MEIDIREADER(QWidget):
 
     def uart_update_text(self,data):
         self.log_browser.append(data)
+        logging.debug( data )
         cmd = str(data[6:])
-        # decode
         cmd = cmd.decode("hex")
         for i in cmd:
             self.r_cmd.r_machine(i)
-        # self.decode.format_print()
-        self.log_browser.append(u"CMD = %s, TYPE= %s, DATA = %s" % \
-            (self.r_cmd.cmd_str,self.r_cmd.op_str,self.r_cmd.data) )
+        if self.r_cmd.cmd_str == '0D':
+            if self.r_cmd.op_str == '01':
+                self.log_browser.append(u"打开串口!" )
+                self.start_button.setText(u"关闭串口")
+            if self.r_cmd.op_str == '00':
+                self.log_browser.append(u"关闭串口!" )
+                self.start_button.setText(u"打开串口")
+                self.setting_uart(0)
+        if self.r_cmd.cmd_str == '0B':
+            if self.r_cmd.op_str == '01':
+                self.log_browser.append(u"设置失败")
+                logging.debug( u"设置失败" )
+            if self.r_cmd.op_str == '00':
+                self.log_browser.append( u"设置成功" )
+                logging.debug( u"设置成功" )
+        if self.r_cmd.cmd_str == '0A':
+            if self.r_cmd.op_str == '00':
+                self.log_browser.append(u"读回UID : [%s]" % self.r_cmd.data)
+                logging.debug( u"读回UID : [%s]" % self.r_cmd.data )
+            if self.r_cmd.op_str == '01':
+                self.log_browser.append(u"读回DES : %s" % self.r_cmd.data)
+                logging.debug( u"读回DES : %s" % self.r_cmd.data )
+            if self.r_cmd.op_str == '02':
+                self.log_browser.append(u"读回TAG_DATA : %s" % self.r_cmd.data)
+                logging.debug( u"读回TAG_DATA : %s" % self.r_cmd.data )
+
         self.r_cmd.clear()
-        # ser.write(cmd)
 
     def change_uart(self):
         global input_count
@@ -311,17 +339,13 @@ class MEIDIREADER(QWidget):
 
         if mode == 1:
             if ser.isOpen() == True:
-                self.log_browser.append(u"打开串口!" )
-                logging.debug(u"打开串口!" )
-                self.start_button.setText(u"关闭串口")
                 self.uart_listen_thread.start()
                 input_count = input_count + 1
         else:
-            self.start_button.setText(u"打开串口")
-            self.log_browser.append(u"关闭串口!" )
-            logging.debug(u"关闭串口!" )
-            input_count = 0
-            ser.close()
+            if input_count > 0:
+
+                input_count = 0
+                ser.close()
 
     def band_start(self):
         global ser
@@ -333,10 +357,23 @@ class MEIDIREADER(QWidget):
         if button_str == u"打开串口":
             self.setting_uart(1)
             if ser.isOpen() == True:
-                self.uart_listen_thread.start()
+                send_cmd  =  "5A 02 0D 01 0E CA"
+                log_str   = u"S[%d]：%s" % (input_count,send_cmd)
+                self.log_browser.append( log_str )
+                logging.debug( log_str )
+                send_cmd = str(send_cmd.replace(' ',''))
+                print send_cmd
+                send_cmd = send_cmd.decode("hex")
+                ser.write(send_cmd)
                 input_count = input_count + 1
         if button_str == u"关闭串口":
-            self.setting_uart(0)
+            send_cmd  =  "5A 02 0D 00 0F CA"
+            log_str   = u"S[%d]：%s" % (input_count,send_cmd)
+            self.log_browser.append( log_str )
+            logging.debug( log_str )
+            send_cmd = str(send_cmd.replace(' ',''))
+            send_cmd = send_cmd.decode("hex")
+            ser.write(send_cmd)
 
     def sync_cmd_to_mcu(self):
         global ser
@@ -357,7 +394,7 @@ class MEIDIREADER(QWidget):
         global input_count
         global ser
 
-        send_cmd  = "5A 02 0C 00 OE CA"
+        send_cmd  = "5A 02 0C 00 0E CA"
         log_str   = u"S[%d]：%s" % (input_count,send_cmd)
 
         if input_count > 0:
@@ -374,7 +411,7 @@ class MEIDIREADER(QWidget):
         global input_count
         global ser
 
-        send_cmd = u"5A 02 0C 01 OF CA"
+        send_cmd = u"5A 02 0C 01 0F CA"
         log_str  = u"S[%d]：%s" % (input_count,send_cmd)
 
         if input_count > 0:
@@ -394,7 +431,7 @@ if __name__=='__main__':
     app.exec_()
 
     if ser != 0:
-        # datburner.find_card_stop()
+        datburner.find_card_stop()
         datburner.setting_uart(0)
 
 

@@ -82,6 +82,9 @@ class HexDecode():
         self.crc  = self.crc ^ string.atoi(x, 16)
         self.status = R_STATUS_DTAT
         self.op_str = x
+        if self.len == 2:
+            self.status = R_STATUS_CRC
+
 
     def r_data(self,x):
         self.crc  = self.crc ^ string.atoi(x, 16)
