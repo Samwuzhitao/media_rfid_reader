@@ -78,44 +78,61 @@ class MEIDIREADER(QWidget):
         input_count         = 0
         self.ports_dict     = {}
         self.dtq_id         = ''
-        self.setWindowTitle(u"滤网RFID调试工具v0.1.0")
+        self.setWindowTitle(u"滤网RFID发卡工具v1.0")
 
         self.com_combo=QComboBox(self)
         self.com_combo.setFixedSize(75, 20)
         self.uart_scan(self.ports_dict)
         self.start_button = QPushButton(u"打开发卡器")
         self.clear_button = QPushButton(u"清空LOG信息")
-        self.send_button = QPushButton(u"发送数据")
         c_hbox = QHBoxLayout()
         c_hbox.addWidget(self.com_combo)
         c_hbox.addWidget(self.start_button)
-        c_hbox.addWidget(self.send_button )
         c_hbox.addWidget(self.clear_button)
 
-        self.dtq_id_label=QLabel(u"滤网ID:")
+        self.op_label=QLabel(u"操作类型  :")
+        self.op_combo=QComboBox(self)
+        self.op_combo.addItems([u'0x00:读取UID',u'0x01:写入DES秘钥',
+            u'0x02:读取TAG数据',u'0x03:写入TAG数据'])
+        self.op_label.setFixedSize(65, 20)
+        self.op_button = QPushButton(u"发送指令")
+        d_hbox = QHBoxLayout()
+        d_hbox.addWidget(self.op_label)
+        d_hbox.addWidget(self.op_combo)
+        d_hbox.addWidget(self.op_button)
+        op_frame = QFrame()
+        op_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        op_frame.setLayout(d_hbox)
+
+        self.dtq_id_label=QLabel(u"滤网序列号:")
         self.dtq_id_lineedit = QLineEdit(u"11223344")
         self.time_label=QLabel(u"生产日期:")
-        self.manufacturer_label=QLabel(u"生产厂家:")
+        self.manufacturer_label=QLabel(u"生产厂家  :")
         self.manufacturer_lineedit = QLineEdit()
         self.mesh_type_label=QLabel(u"滤网类型:")
         self.mesh_type_combo = QComboBox()
-        self.mesh_type_combo.addItems([u'0x01:复合滤网',u'0x02:甲醛滤网',
+        self.mesh_type_combo.addItems([u'0x01:复合滤网\PM2.5滤网',u'0x02:甲醛滤网',
             u'0x03:塑料袋NFC标签',u'0x04:非法滤网',u'0xFF:没有标签'])
-
+        self.des_label=QLabel(u"DES秘钥   :")
+        self.des_lineedit = QLineEdit()
         self.time_lineedit = QLineEdit( time.strftime(
             '%Y-%m-%d ',time.localtime(time.time())))
-
         g_hbox = QGridLayout()
-        g_hbox.addWidget(self.dtq_id_label         ,1,1)
-        g_hbox.addWidget(self.dtq_id_lineedit      ,1,2)
-        g_hbox.addWidget(self.time_label           ,1,3)
-        g_hbox.addWidget(self.time_lineedit        ,1,4)
-        g_hbox.addWidget(self.manufacturer_label   ,2,1)
-        g_hbox.addWidget(self.manufacturer_lineedit,2,2)
-        g_hbox.addWidget(self.mesh_type_label      ,2,3)
-        g_hbox.addWidget(self.mesh_type_combo      ,2,4)
+        g_hbox.addWidget(self.dtq_id_label         ,0,0)
+        g_hbox.addWidget(self.dtq_id_lineedit      ,0,1)
+        g_hbox.addWidget(self.time_label           ,0,2)
+        g_hbox.addWidget(self.time_lineedit        ,0,3)
+        g_hbox.addWidget(self.manufacturer_label   ,1,0)
+        g_hbox.addWidget(self.manufacturer_lineedit,1,1)
+        g_hbox.addWidget(self.mesh_type_label      ,1,2)
+        g_hbox.addWidget(self.mesh_type_combo      ,1,3)
+        g_hbox.addWidget(self.des_label            ,2,0)
+        g_hbox.addWidget(self.des_lineedit         ,2,1,2,3)
+        conf_frame = QFrame()
+        conf_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        conf_frame.setLayout(g_hbox)
 
-        self.check_browser_label=QLabel(u"数据校验")
+        self.check_browser_label=QLabel(u"数据校验:")
         self.check_browser_label.setFixedHeight(20)
         self.check_browser = QTextEdit()
         self.check_browser.setFont(QFont("Courier New", 10, QFont.Bold))
@@ -125,7 +142,7 @@ class MEIDIREADER(QWidget):
         b_vbox.addWidget(self.check_browser_label )
         b_vbox.addWidget(self.check_browser       )
 
-        self.log_browser_label=QLabel(u"log日志")
+        self.log_browser_label=QLabel(u"LOG日志 :")
         self.log_browser = QTextBrowser()
         self.log_browser.setFont(QFont("Courier New", 10, QFont.Bold))
         self.log_browser.document().setMaximumBlockCount (1000);
@@ -136,7 +153,8 @@ class MEIDIREADER(QWidget):
 
         box = QVBoxLayout()
         box.addLayout(c_hbox)
-        box.addLayout(g_hbox)
+        box.addWidget(conf_frame)
+        box.addWidget(op_frame)
         box.addLayout(b_vbox)
         box.addLayout(l_vbox)
         self.setLayout(box)
@@ -144,7 +162,6 @@ class MEIDIREADER(QWidget):
 
         self.clear_button.clicked.connect(self.clear_text)
         self.start_button.clicked.connect(self.band_start)
-
         self.uart_listen_thread=UartListen()
         self.connect(self.uart_listen_thread,SIGNAL('output(QString)'),
             self.uart_update_text)
