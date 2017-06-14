@@ -115,10 +115,10 @@ class HexDecode():
         crc_len = len( crc_data )
 
         for item in crc_data:
-            i = i + 2
             if i <= crc_len-2:
                 self.crc  = self.crc ^ string.atoi(crc_data[i:i+2], 16)
                 # print "c_crc = %02X crc_in = %s" % (self.crc,crc_data[i:i+2])
+            i = i + 2
         self.crc_str = "%02X" % self.crc
         cmd_str = self.header + self.len_str + self.cmd_str + \
                   self.op_str + self.data + self.crc_str + self.end

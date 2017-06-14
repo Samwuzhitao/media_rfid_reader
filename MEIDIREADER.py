@@ -34,13 +34,13 @@ class UartListen(QThread):
         self.working       = True
         self.num           = 0
         self.hex_revice    = HexDecode()
-        self.ReviceFunSets = { 0:self.decode }
+        self.ReviceFunSets = { 0:self.cmd_decode }
 
     def __del__(self):
         self.working=False
         self.wait()
 
-    def decode(self,read_char):
+    def cmd_decode(self,read_char):
         ISOTIMEFORMAT = '%Y-%m-%d %H:%M:%S'
         recv_str = self.hex_revice.r_machine(read_char)
 
@@ -172,7 +172,7 @@ class MEIDIREADER(QWidget):
         self.setLayout(box)
         self.resize( 530, 500 )
 
-        self.tag_data_sync()
+        self.tpye_data_sync()
 
         self.clear_button.clicked.connect(self.clear_text)
         self.start_button.clicked.connect(self.band_start)
@@ -180,6 +180,7 @@ class MEIDIREADER(QWidget):
         self.mesh_type_combo.currentIndexChanged.connect(self.tpye_data_sync)
         self.op_combo.currentIndexChanged.connect(self.tpye_data_sync)
         self.type_combo.currentIndexChanged.connect(self.tpye_data_sync)
+        # self.op_button.clicked.connect(self.find_card_start)
 
         self.uart_listen_thread=UartListen()
         self.connect(self.uart_listen_thread,SIGNAL('output(QString)'),
@@ -346,9 +347,43 @@ class MEIDIREADER(QWidget):
         self.log_browser.append( log_str )
         logging.debug( log_str )
 
-        send_cmd = send_cmd.replace(' ','')
+        send_cmd = str(send_cmd.replace(' ',''))
         send_cmd = send_cmd.decode("hex")
         if input_count > 0:
+            ser.write(send_cmd)
+            input_count = input_count + 1
+
+    def find_card_stop(self):
+        global input_count
+        global ser
+
+        send_cmd  = "5A 02 0C 00 OE CA"
+        log_str   = u"S[%d]：%s" % (input_count,send_cmd)
+
+        if input_count > 0:
+            self.log_browser.append( log_str )
+            logging.debug( log_str )
+
+            send_cmd = str(send_cmd.replace(' ',''))
+            send_cmd = send_cmd.decode("hex")
+
+            ser.write(send_cmd)
+            input_count = input_count + 1
+
+    def find_card_start(self):
+        global input_count
+        global ser
+
+        send_cmd = u"5A 02 0C 01 OF CA"
+        log_str  = u"S[%d]：%s" % (input_count,send_cmd)
+
+        if input_count > 0:
+            self.log_browser.append( log_str )
+            logging.debug( log_str )
+
+            send_cmd = send_cmd.replace(' ','')
+            send_cmd = send_cmd.decode("hex")
+
             ser.write(send_cmd)
             input_count = input_count + 1
 
@@ -357,12 +392,9 @@ if __name__=='__main__':
     datburner = MEIDIREADER()
     datburner.show()
     app.exec_()
-    # cmd = '{"fun": "si24r2e_auto_burn","setting": "0"}'
+
     if ser != 0:
-        # try:
-        #     ser.write(cmd)
-        # except serial.SerialException:
-        #     pass
+        # datburner.find_card_stop()
         datburner.setting_uart(0)
 
 
