@@ -33,7 +33,7 @@ class UartListen(QThread):
         super(UartListen,self).__init__(parent)
         self.working       = True
         self.num           = 0
-        self.json_revice   = HexDecode()
+        self.hex_revice    = HexDecode()
         self.ReviceFunSets = { 0:self.decode }
 
     def __del__(self):
@@ -41,15 +41,14 @@ class UartListen(QThread):
         self.wait()
 
     def decode(self,read_char):
-        recv_str      = ""
         ISOTIMEFORMAT = '%Y-%m-%d %H:%M:%S'
+        recv_str = self.hex_revice.r_machine(read_char)
 
-        str1 = self.json_revice.r_machine(read_char)
-
-        if len(str1) != 0:
+        if recv_str :
             now = time.strftime( ISOTIMEFORMAT,
                 time.localtime(time.time()))
-            recv_str = u"R[%d]: %s" % (input_count-1,str1)
+            recv_str = u"R[%d]: %s" % (input_count-1,recv_str)
+            print "REV = %s" % recv_str
         return recv_str
 
     def run(self):
@@ -67,17 +66,20 @@ class UartListen(QThread):
                     pass
                 if input_count > 0:
                     recv_str  = self.ReviceFunSets[0]( read_char )
-                if recv_str :
-                    self.emit(SIGNAL('output(QString)'),recv_str)
+                    if recv_str :
+                        self.hex_revice.clear()
+                        self.emit(SIGNAL('output(QString)'),recv_str)
 
 class MEIDIREADER(QWidget):
     def __init__(self, parent=None):
         global ser
-
         super(MEIDIREADER, self).__init__(parent)
         input_count         = 0
         self.ports_dict     = {}
         self.dtq_id         = ''
+        self.r_cmd          = HexDecode()
+        self.s_cmd          = HexDecode()
+        self.s_cmd.init()
         self.setWindowTitle(u"滤网RFID发卡工具v1.0")
 
         self.com_combo=QComboBox(self)
@@ -98,6 +100,8 @@ class MEIDIREADER(QWidget):
         self.type_label.setFixedSize(30, 20)
         self.type_combo=QComboBox(self)
         self.type_combo.addItems([u'0x00:UID',u'0x01:DES秘钥',u'0x02:TAG数据'])
+        self.type_combo.setCurrentIndex(self.type_combo.
+            findText(u'0x02:TAG数据'))
         self.sync_button = QPushButton(u"同步数据")
         self.op_button = QPushButton(u"生效数据")
         d_hbox = QHBoxLayout()
@@ -112,18 +116,19 @@ class MEIDIREADER(QWidget):
         op_frame.setLayout(d_hbox)
 
         self.dtq_id_label=QLabel(u"滤网序列号:")
-        self.dtq_id_lineedit = QLineEdit(u"11223344")
+        self.dtq_id_lineedit = QLineEdit(u"11 22 33 44")
         self.time_label=QLabel(u"生产日期:")
         self.manufacturer_label=QLabel(u"生产厂家  :")
-        self.manufacturer_lineedit = QLineEdit()
+        self.manufacturer_lineedit = QLineEdit(u'FF')
         self.mesh_type_label=QLabel(u"滤网类型:")
         self.mesh_type_combo = QComboBox()
         self.mesh_type_combo.addItems([u'0x01:复合滤网\PM2.5滤网',u'0x02:甲醛滤网',
             u'0x03:塑料袋NFC标签',u'0x04:非法滤网',u'0xFF:没有标签'])
         self.des_label=QLabel(u"DES秘钥   :")
-        self.des_lineedit = QLineEdit()
+        self.des_lineedit = QLineEdit(u'FF FF FF FF FF FF FF FF')
         self.time_lineedit = QLineEdit( time.strftime(
-            '%Y-%m-%d ',time.localtime(time.time())))
+            '%Y-%m-%d',time.localtime(time.time())))
+
         g_hbox = QGridLayout()
         g_hbox.addWidget(self.dtq_id_label         ,0,0)
         g_hbox.addWidget(self.dtq_id_lineedit      ,0,1)
@@ -167,13 +172,95 @@ class MEIDIREADER(QWidget):
         self.setLayout(box)
         self.resize( 530, 500 )
 
+        self.tag_data_sync()
+
         self.clear_button.clicked.connect(self.clear_text)
         self.start_button.clicked.connect(self.band_start)
+        self.sync_button.clicked.connect(self.sync_cmd_to_mcu)
+        self.mesh_type_combo.currentIndexChanged.connect(self.tpye_data_sync)
+        self.op_combo.currentIndexChanged.connect(self.tpye_data_sync)
+        self.type_combo.currentIndexChanged.connect(self.tpye_data_sync)
+
         self.uart_listen_thread=UartListen()
         self.connect(self.uart_listen_thread,SIGNAL('output(QString)'),
             self.uart_update_text)
         self.com_combo.currentIndexChanged.connect(self.change_uart)
 
+    def get_lineedit_str(self,edit,type):
+        data_str = ''
+        if type == 6:
+            r_str = unicode(edit.currentText())
+            if r_str == u'0x00:UID':
+                data_str = '00'
+            if r_str == u'0x01:DES秘钥':
+                data_str = '01'
+            if r_str == u'0x02:TAG数据':
+                data_str = '02'
+            # print "TYPE = %s" % data_str
+            self.s_cmd.op_str = data_str
+
+        if type == 5:
+            r_str = unicode(edit.currentText())
+            if r_str == u'0x0A:读':
+                data_str = '0A'
+            if r_str == u'0x0B:写':
+                data_str = '0B'
+            # print "CMD = %s" % data_str
+            self.s_cmd.cmd_str = data_str
+
+        if type == 4:
+            r_str = unicode(edit.currentText())
+            if r_str == u'0x01:复合滤网\PM2.5滤网':
+                data_str = '01'
+            if r_str == u'0x02:甲醛滤网':
+                data_str = '02'
+            if r_str == u'0x03:塑料袋NFC标签':
+                data_str = '03'
+            if r_str == u'0x04:非法滤网':
+                data_str = '04'
+            if r_str == u'0xFF:没有标签':
+                data_str = 'FF'
+            # print u"滤网类型 = %s" % data_str
+            self.s_cmd.data = self.s_cmd.data + data_str
+            self.s_cmd.len  = self.s_cmd.len + len(data_str)/2
+            self.s_cmd.len_str = "%02X" % self.s_cmd.len
+
+        if type == 7 or type == 3 or type == 2 or type == 1:
+            data_str = str(edit.text())
+            if type == 2:
+                data_str = data_str[2:]
+            data_str = data_str.replace('-','')
+            data_str = data_str.replace(' ','')
+        # print "data = %s len = %d" % (data_str,len(data_str))
+            self.s_cmd.data = self.s_cmd.data + data_str
+            self.s_cmd.len  = self.s_cmd.len + len(data_str)/2
+            self.s_cmd.len_str = "%02X" % self.s_cmd.len
+
+    def tag_data_sync(self):
+        self.s_cmd.init()
+        self.get_lineedit_str(self.dtq_id_lineedit      ,1)
+        self.get_lineedit_str(self.time_lineedit        ,2)
+        self.get_lineedit_str(self.manufacturer_lineedit,3)
+        self.get_lineedit_str(self.mesh_type_combo      ,4)
+        self.get_lineedit_str(self.op_combo             ,5)
+        self.get_lineedit_str(self.type_combo           ,6)
+        self.check_browser.setText(self.s_cmd.get_str()   )
+
+    def tpye_data_sync(self):
+        self.s_cmd.init()
+        r_str = unicode(self.type_combo.currentText())
+        if r_str == u'0x00:UID':
+            self.get_lineedit_str(self.op_combo             ,5)
+            self.get_lineedit_str(self.type_combo           ,6)
+            self.check_browser.setText(self.s_cmd.get_str()   )
+        if r_str == u'0x01:DES秘钥':
+            self.get_lineedit_str(self.op_combo             ,5)
+            self.get_lineedit_str(self.type_combo           ,6)
+            self.get_lineedit_str(self.des_lineedit         ,7)
+            self.check_browser.setText(self.s_cmd.get_str()   )
+        if r_str == u'0x02:TAG数据':
+            self.tag_data_sync()
+  
     def uart_scan(self,dict):
         for i in range(256):
 
@@ -190,12 +277,17 @@ class MEIDIREADER(QWidget):
         self.log_browser.clear()
 
     def uart_update_text(self,data):
-        json_dict = {}
-        if data[0] == 'R':
-            json_str = data[6:]
-            print json_str
-        else:
-            self.log_browser.append(data)
+        self.log_browser.append(data)
+        cmd = str(data[6:])
+        # decode
+        cmd = cmd.decode("hex")
+        for i in cmd:
+            self.r_cmd.r_machine(i)
+        # self.decode.format_print()
+        self.log_browser.append(u"CMD = %s, TYPE= %s, DATA = %s" % \
+            (self.r_cmd.cmd_str,self.r_cmd.op_str,self.r_cmd.data) )
+        self.r_cmd.clear()
+        # ser.write(cmd)
 
     def change_uart(self):
         global input_count
@@ -212,17 +304,21 @@ class MEIDIREADER(QWidget):
         serial_port = str(self.com_combo.currentText())
 
         try:
-            ser = serial.Serial( self.ports_dict[serial_port], 1152000)
+            ser = serial.Serial( self.ports_dict[serial_port], 115200)
         except serial.SerialException:
             pass
 
         if mode == 1:
             if ser.isOpen() == True:
-                self.start_button.setText(u"关闭发卡器")
+                self.log_browser.append(u"打开串口!" )
+                logging.debug(u"打开串口!" )
+                self.start_button.setText(u"关闭串口")
                 self.uart_listen_thread.start()
                 input_count = input_count + 1
         else:
-            self.start_button.setText(u"打开发卡器")
+            self.start_button.setText(u"打开串口")
+            self.log_browser.append(u"关闭串口!" )
+            logging.debug(u"关闭串口!" )
             input_count = 0
             ser.close()
 
@@ -233,27 +329,40 @@ class MEIDIREADER(QWidget):
         button = self.sender()
         button_str = button.text()
 
-        if button_str == u"打开发卡器":
+        if button_str == u"打开串口":
             self.setting_uart(1)
             if ser.isOpen() == True:
                 self.uart_listen_thread.start()
-                cmd = "{'fun':'bind_start'}"
-                ser.write(cmd)
                 input_count = input_count + 1
-                data = u"S[%d]: " % (input_count-1) + u"%s" % cmd
-                return
+        if button_str == u"关闭串口":
+            self.setting_uart(0)
+
+    def sync_cmd_to_mcu(self):
+        global ser
+        global input_count
+
+        send_cmd = str(self.check_browser.toPlainText())
+        log_str = u"S[%d]：%s" % (input_count,send_cmd)
+        self.log_browser.append( log_str )
+        logging.debug( log_str )
+
+        send_cmd = send_cmd.replace(' ','')
+        send_cmd = send_cmd.decode("hex")
+        if input_count > 0:
+            ser.write(send_cmd)
+            input_count = input_count + 1
 
 if __name__=='__main__':
     app = QApplication(sys.argv)
     datburner = MEIDIREADER()
     datburner.show()
     app.exec_()
-    cmd = '{"fun": "si24r2e_auto_burn","setting": "0"}'
+    # cmd = '{"fun": "si24r2e_auto_burn","setting": "0"}'
     if ser != 0:
-        try:
-            ser.write(cmd)
-        except serial.SerialException:
-            pass
+        # try:
+        #     ser.write(cmd)
+        # except serial.SerialException:
+        #     pass
         datburner.setting_uart(0)
 
 
