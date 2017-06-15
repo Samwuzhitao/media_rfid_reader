@@ -340,7 +340,6 @@ class MEIDIREADER(QWidget):
         if mode == 1:
             if ser.isOpen() == True:
                 self.uart_listen_thread.start()
-                input_count = input_count + 1
         else:
             if input_count > 0:
 
