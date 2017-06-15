@@ -180,7 +180,7 @@ class MEIDIREADER(QWidget):
         self.mesh_type_combo.currentIndexChanged.connect(self.tpye_data_sync)
         self.op_combo.currentIndexChanged.connect(self.tpye_data_sync)
         self.type_combo.currentIndexChanged.connect(self.tpye_data_sync)
-        # self.op_button.clicked.connect(self.find_card_start)
+        self.op_button.clicked.connect(self.find_card_start)
 
         self.uart_listen_thread=UartListen()
         self.connect(self.uart_listen_thread,SIGNAL('output(QString)'),
@@ -359,6 +359,7 @@ class MEIDIREADER(QWidget):
         if button_str == u"打开串口":
             self.setting_uart(1)
             if ser.isOpen() == True:
+                input_count = input_count + 1
                 send_cmd  =  "5A 02 0D 01 0E CA"
                 log_str   = u"S[%d]：%s" % (input_count,send_cmd)
                 self.log_browser.append( log_str )
@@ -367,7 +368,7 @@ class MEIDIREADER(QWidget):
                 print send_cmd
                 send_cmd = send_cmd.decode("hex")
                 ser.write(send_cmd)
-                input_count = input_count + 1
+                
         if button_str == u"关闭串口":
             send_cmd  =  "5A 02 0D 00 0F CA"
             log_str   = u"S[%d]：%s" % (input_count,send_cmd)
@@ -380,15 +381,13 @@ class MEIDIREADER(QWidget):
     def sync_cmd_to_mcu(self):
         global ser
         global input_count
-
-        send_cmd = str(self.check_browser.toPlainText())
-        log_str = u"S[%d]：%s" % (input_count,send_cmd)
-        self.log_browser.append( log_str )
-        logging.debug( log_str )
-
-        send_cmd = str(send_cmd.replace(' ',''))
-        send_cmd = send_cmd.decode("hex")
         if input_count > 0:
+            send_cmd = str(self.check_browser.toPlainText())
+            log_str = u"S[%d]：%s" % (input_count,send_cmd)
+            self.log_browser.append( log_str )
+            logging.debug( log_str )
+            send_cmd = str(send_cmd.replace(' ',''))
+            send_cmd = send_cmd.decode("hex")
             ser.write(send_cmd)
             input_count = input_count + 1
 
