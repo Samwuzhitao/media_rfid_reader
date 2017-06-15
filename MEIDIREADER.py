@@ -245,7 +245,7 @@ class MEIDIREADER(QWidget):
         self.get_lineedit_str(self.mesh_type_combo      ,4)
         self.get_lineedit_str(self.op_combo             ,5)
         self.get_lineedit_str(self.type_combo           ,6)
-        self.check_browser.setText(self.s_cmd.get_str()   )
+        self.check_browser.setText(self.s_cmd.get_str(1)  )
 
     def tpye_data_sync(self):
         self.s_cmd.init()
@@ -255,18 +255,18 @@ class MEIDIREADER(QWidget):
             if r_str == u'0x00:UID':
                 self.get_lineedit_str(self.op_combo             ,5)
                 self.get_lineedit_str(self.type_combo           ,6)
-                self.check_browser.setText(self.s_cmd.get_str()   )
+                self.check_browser.setText(self.s_cmd.get_str(1)  )
             if r_str == u'0x01:DES秘钥':
                 self.get_lineedit_str(self.op_combo             ,5)
                 self.get_lineedit_str(self.type_combo           ,6)
                 self.get_lineedit_str(self.des_lineedit         ,7)
-                self.check_browser.setText(self.s_cmd.get_str()   )
+                self.check_browser.setText(self.s_cmd.get_str(1)  )
             if r_str == u'0x02:TAG数据':
                 self.tag_data_sync()
         else:
             self.get_lineedit_str(self.op_combo             ,5)
             self.get_lineedit_str(self.type_combo           ,6)
-            self.check_browser.setText(self.s_cmd.get_str()   )
+            self.check_browser.setText(self.s_cmd.get_str(1)  )
   
     def uart_scan(self,dict):
         for i in range(256):
@@ -284,12 +284,15 @@ class MEIDIREADER(QWidget):
         self.log_browser.clear()
 
     def uart_update_text(self,data):
-        self.log_browser.append(data)
+        global input_count
         logging.debug( data )
         cmd = str(data[6:])
         cmd = cmd.decode("hex")
         for i in cmd:
             self.r_cmd.r_machine(i)
+        show_str = "R[%d]: %s" % (input_count,self.r_cmd.get_str(1))
+        self.log_browser.append( show_str )
+
         if self.r_cmd.cmd_str == '0D':
             if self.r_cmd.op_str == '01':
                 self.log_browser.append(u"打开串口!" )

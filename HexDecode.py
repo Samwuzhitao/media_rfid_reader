@@ -111,7 +111,7 @@ class HexDecode():
 
             return cmd_str
 
-    def get_str(self):
+    def get_str(self,mode):
         crc_data = self.len_str + self.cmd_str + self.op_str + self.data
         # print crc_data
         i = 0
@@ -123,16 +123,38 @@ class HexDecode():
                 # print "c_crc = %02X crc_in = %s" % (self.crc,crc_data[i:i+2])
             i = i + 2
         self.crc_str = "%02X" % self.crc
-        cmd_str = self.header + self.len_str + self.cmd_str + \
-                  self.op_str + self.data + self.crc_str + self.end
+        # cmd_str = self.header + self.len_str + self.cmd_str + \
+        #           self.op_str + self.data + self.crc_str + self.end
 
-        returm_str = ''
+        data_str = ''
         i = 0
-        for item in cmd_str:
+        for item in self.data:
             if i % 2 == 0 and i > 0:
-                returm_str = returm_str + ' '
-            returm_str = returm_str + item
+                data_str = data_str + ' '
+            data_str = data_str + item
             i = i + 1
+
+        returm_str = self.header
+        if mode == 0:
+            returm_str = self.header + self.len_str + self.cmd_str + \
+                  self.op_str + data_str + self.crc_str + self.end
+        else:
+            if self.len_str:
+                color_len_str = "<font color=lightgreen> %s</font>" % self.len_str
+                returm_str = returm_str + color_len_str
+            if self.cmd_str:
+                color_cmd_str = "<font color=red> %s</font>" % self.cmd_str
+                returm_str = returm_str + color_cmd_str
+            if self.op_str:
+                color_op_str = "<font color=green> %s</font>" % self.op_str
+                returm_str = returm_str + color_op_str
+            if data_str:
+                data_str = "<font color=blue> %s</font>" % data_str
+                returm_str = returm_str + data_str
+            if self.crc_str:
+                color_crc_str = "<font color=red> %s </font>" % self.crc_str
+                returm_str = returm_str + color_crc_str
+            returm_str = returm_str + self.end
         return returm_str
 
     def format_print(self):
