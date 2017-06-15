@@ -137,7 +137,7 @@ class MEIDIREADER(QWidget):
         conf_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         conf_frame.setLayout(g_hbox)
 
-        self.check_browser_label=QLabel(u"数据校验:")
+        self.check_browser_label=QLabel(u"发送数据区:")
         self.check_browser_label.setFixedHeight(20)
         self.check_browser = QTextEdit()
         self.check_browser.setFont(QFont("Courier New", 10, QFont.Bold))
@@ -277,37 +277,38 @@ class MEIDIREADER(QWidget):
 
     def uart_update_text(self,data):
         global input_count
+        print data
         logging.debug( data )
         cmd = str(data).decode("hex")
         for i in cmd:
             self.r_cmd.r_machine(i)
-        show_str = "R[%d]: %s" % (input_count,self.r_cmd.get_str(1))
+        show_str = u"R[%d]：%s" % (input_count,self.r_cmd.get_str(1))
         self.log_browser.append( show_str )
 
         if self.r_cmd.cmd_str == '0D':
             if self.r_cmd.op_str == '01':
-                self.log_browser.append(u"打开串口!" )
+                self.log_browser.append(u"<font color=black>打开串口!</font>" )
                 self.start_button.setText(u"关闭串口")
             if self.r_cmd.op_str == '00':
-                self.log_browser.append(u"关闭串口!" )
+                self.log_browser.append(u"<font color=black>关闭串口!</font>" )
                 self.start_button.setText(u"打开串口")
                 self.setting_uart(0)
         if self.r_cmd.cmd_str == '0B':
             if self.r_cmd.op_str == '01':
-                self.log_browser.append(u"设置失败")
+                self.log_browser.append(u"<font color=black>设置失败</font>")
                 logging.debug( u"设置失败" )
             if self.r_cmd.op_str == '00':
-                self.log_browser.append( u"设置成功" )
+                self.log_browser.append( u"<font color=black>设置成功</font>" )
                 logging.debug( u"设置成功" )
         if self.r_cmd.cmd_str == '0A':
             if self.r_cmd.op_str == '00':
-                self.log_browser.append(u"读回UID : [%s]" % self.r_cmd.data)
+                self.log_browser.append(u"<font color=black>读回UID : [%s]</font>" % self.r_cmd.data)
                 logging.debug( u"读回UID : [%s]" % self.r_cmd.data )
             if self.r_cmd.op_str == '01':
-                self.log_browser.append(u"读回DES : %s" % self.r_cmd.data)
+                self.log_browser.append(u"<font color=black>读回DES : %s</font>" % self.r_cmd.data)
                 logging.debug( u"读回DES : %s" % self.r_cmd.data )
             if self.r_cmd.op_str == '02':
-                self.log_browser.append(u"读回TAG_DATA : %s" % self.r_cmd.data)
+                self.log_browser.append(u"<font color=black>读回TAG_DATA : %s</font>" % self.r_cmd.data)
                 logging.debug( u"读回TAG_DATA : %s" % self.r_cmd.data )
 
         self.r_cmd.clear()

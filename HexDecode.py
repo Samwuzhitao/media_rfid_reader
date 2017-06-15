@@ -85,7 +85,6 @@ class HexDecode():
         if self.len == 2:
             self.status = R_STATUS_CRC
 
-
     def r_data(self,x):
         self.crc  = self.crc ^ string.atoi(x, 16)
         self.data_c = self.data_c + 1
@@ -108,10 +107,10 @@ class HexDecode():
         else:
             cmd_str = self.header + self.len_str + self.cmd_str + \
                       self.op_str + self.data + self.crc_str + self.end
-
             return cmd_str
 
     def get_str(self,mode):
+        self.crc = 0
         crc_data = self.len_str + self.cmd_str + self.op_str + self.data
         # print crc_data
         i = 0
@@ -123,8 +122,7 @@ class HexDecode():
                 # print "c_crc = %02X crc_in = %s" % (self.crc,crc_data[i:i+2])
             i = i + 2
         self.crc_str = "%02X" % self.crc
-        # cmd_str = self.header + self.len_str + self.cmd_str + \
-        #           self.op_str + self.data + self.crc_str + self.end
+        # print self.crc_str
 
         data_str = ''
         i = 0
@@ -139,21 +137,17 @@ class HexDecode():
             returm_str = self.header + self.len_str + self.cmd_str + \
                   self.op_str + data_str + self.crc_str + self.end
         else:
-            if self.len_str:
-                color_len_str = "<font color=lightgreen> %s</font>" % self.len_str
-                returm_str = returm_str + color_len_str
-            if self.cmd_str:
-                color_cmd_str = "<font color=red> %s</font>" % self.cmd_str
-                returm_str = returm_str + color_cmd_str
-            if self.op_str:
-                color_op_str = "<font color=green> %s</font>" % self.op_str
-                returm_str = returm_str + color_op_str
+            color_len_str = "<font color=lightgreen> %s</font>" % self.len_str
+            returm_str    = returm_str + color_len_str
+            color_cmd_str = "<font color=red> %s</font>" % self.cmd_str
+            returm_str    = returm_str + color_cmd_str
+            color_op_str  = "<font color=green> %s</font>" % self.op_str
+            returm_str    = returm_str + color_op_str
             if data_str:
-                data_str = "<font color=blue> %s</font>" % data_str
+                data_str   = "<font color=blue> %s</font>" % data_str
                 returm_str = returm_str + data_str
-            if self.crc_str:
-                color_crc_str = "<font color=red> %s </font>" % self.crc_str
-                returm_str = returm_str + color_crc_str
+            color_crc_str  = "<font color=red> %s </font>" % self.crc_str
+            returm_str = returm_str + color_crc_str
             returm_str = returm_str + self.end
         return returm_str
 
