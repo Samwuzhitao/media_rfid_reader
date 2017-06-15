@@ -368,7 +368,7 @@ class MEIDIREADER(QWidget):
                 print send_cmd
                 send_cmd = send_cmd.decode("hex")
                 ser.write(send_cmd)
-                
+
         if button_str == u"关闭串口":
             send_cmd  =  "5A 02 0D 00 0F CA"
             log_str   = u"S[%d]：%s" % (input_count,send_cmd)
@@ -382,6 +382,7 @@ class MEIDIREADER(QWidget):
         global ser
         global input_count
         if input_count > 0:
+            input_count = input_count + 1
             send_cmd = str(self.check_browser.toPlainText())
             log_str = u"S[%d]：%s" % (input_count,send_cmd)
             self.log_browser.append( log_str )
@@ -389,7 +390,6 @@ class MEIDIREADER(QWidget):
             send_cmd = str(send_cmd.replace(' ',''))
             send_cmd = send_cmd.decode("hex")
             ser.write(send_cmd)
-            input_count = input_count + 1
 
     def find_card_stop(self):
         global input_count
@@ -399,14 +399,12 @@ class MEIDIREADER(QWidget):
         log_str   = u"S[%d]：%s" % (input_count,send_cmd)
 
         if input_count > 0:
+            input_count = input_count + 1
             self.log_browser.append( log_str )
             logging.debug( log_str )
-
             send_cmd = str(send_cmd.replace(' ',''))
             send_cmd = send_cmd.decode("hex")
-
             ser.write(send_cmd)
-            input_count = input_count + 1
 
     def find_card_start(self):
         global input_count
@@ -416,14 +414,12 @@ class MEIDIREADER(QWidget):
         log_str  = u"S[%d]：%s" % (input_count,send_cmd)
 
         if input_count > 0:
+            input_count = input_count + 1
             self.log_browser.append( log_str )
             logging.debug( log_str )
-
             send_cmd = send_cmd.replace(' ','')
             send_cmd = send_cmd.decode("hex")
-
             ser.write(send_cmd)
-            input_count = input_count + 1
 
 if __name__=='__main__':
     app = QApplication(sys.argv)
