@@ -246,9 +246,8 @@ class MEIDIREADER(QWidget):
         op_str = unicode(self.op_combo.currentText())
         if op_str == u'0x0B:写':
             if r_str == u'0x00:UID':
-                self.get_lineedit_str(self.op_combo             ,5)
-                self.get_lineedit_str(self.type_combo           ,6)
-                self.check_browser.setText(self.s_cmd.get_str(1)  )
+                self.s_cmd.clear()
+                self.check_browser.setText( "NO USE" )
             if r_str == u'0x01:DES秘钥':
                 self.get_lineedit_str(self.op_combo             ,5)
                 self.get_lineedit_str(self.type_combo           ,6)
@@ -380,7 +379,10 @@ class MEIDIREADER(QWidget):
             self.log_browser.append( log_str )
             logging.debug( log_str )
             send_cmd = str(send_cmd.replace(' ',''))
-            send_cmd = send_cmd.decode("hex")
+            try:
+                send_cmd = send_cmd.decode("hex")
+            except TypeError:
+                pass
             ser.write(send_cmd)
 
     def find_card_stop(self):
