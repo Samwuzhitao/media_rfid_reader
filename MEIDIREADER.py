@@ -40,16 +40,9 @@ class UartListen(QThread):
         self.working=False
         self.wait()
 
-    def cmd_decode(self,read_char):
-        ISOTIMEFORMAT = '%Y-%m-%d %H:%M:%S'
-        recv_str = self.hex_revice.r_machine(read_char)
-
-        if recv_str :
-            now = time.strftime( ISOTIMEFORMAT,
-                time.localtime(time.time()))
-            recv_str = u"R[%d]: %s" % (input_count-1,recv_str)
-            print "REV = %s" % recv_str
-        return recv_str
+    def cmd_decode(self,r_char):
+        r_str = self.hex_revice.r_machine(r_char)
+        return r_str
 
     def run(self):
         global ser
@@ -286,8 +279,7 @@ class MEIDIREADER(QWidget):
     def uart_update_text(self,data):
         global input_count
         logging.debug( data )
-        cmd = str(data[6:])
-        cmd = cmd.decode("hex")
+        cmd = str(data).decode("hex")
         for i in cmd:
             self.r_cmd.r_machine(i)
         show_str = "R[%d]: %s" % (input_count,self.r_cmd.get_str(1))
