@@ -9,11 +9,10 @@ import string
 
 R_STATUS_HEADER = 0
 R_STATUS_LEN    = 1
-R_STATUS_CMD    = 2
-R_STATUS_TYPE   = 3
-R_STATUS_DTAT   = 4
-R_STATUS_CRC    = 5
-R_STATUS_END    = 6
+R_STATUS_SN     = 2
+R_STATUS_DTAT   = 3
+R_STATUS_CRC    = 4
+R_STATUS_END    = 5
 
 class HexDecode():
     def __init__(self):
@@ -21,8 +20,7 @@ class HexDecode():
         self.header  = ""
         self.len     = 0
         self.len_str = ""
-        self.cmd_str = ""
-        self.op_str  = ""
+        self.sn_str  = ""
         self.data    = ""
         self.data_c  = 0
         self.crc     = 0
@@ -31,11 +29,10 @@ class HexDecode():
         self.cmd_m   = {
             R_STATUS_HEADER : self.r_header ,
             R_STATUS_LEN    : self.r_len    ,
-            R_STATUS_CMD    : self.r_cmd    ,
-            R_STATUS_TYPE   : self.r_type   ,
+            R_STATUS_SN     : self.r_sn     ,
             R_STATUS_DTAT   : self.r_data   ,
             R_STATUS_CRC    : self.r_crc_fun,
-            R_STATUS_END    : self.r_end    
+            R_STATUS_END    : self.r_end
         }
 
     def clear(self):
@@ -43,8 +40,7 @@ class HexDecode():
         self.header  = ""
         self.len     = 0
         self.len_str = ""
-        self.cmd_str = ""
-        self.op_str  = ""
+        self.sn_str  = ""
         self.data    = ""
         self.data_c  = 0
         self.crc     = 0
@@ -55,8 +51,7 @@ class HexDecode():
         self.header  = "5A"
         self.len     = 2
         self.len_str = "02"
-        self.cmd_str = "FF"
-        self.op_str  = "FF"
+        self.sn_str  = ""
         self.data    = ""
         self.crc     = 0
         self.crc_str = ""
@@ -69,31 +64,29 @@ class HexDecode():
 
     def r_len(self,x):
         self.crc  = self.crc ^ string.atoi(x, 16)
-        self.status = R_STATUS_CMD
+        self.status = R_STATUS_SN
         self.len_str= x
         self.len    = string.atoi(x, 16)
 
-    def r_cmd(self,x):
+    def r_sn(self,x):
         self.crc  = self.crc ^ string.atoi(x, 16)
-        self.status = R_STATUS_TYPE
-        self.cmd_str = x
-
-    def r_type(self,x):
-        self.crc  = self.crc ^ string.atoi(x, 16)
-        self.status = R_STATUS_DTAT
-        self.op_str = x
-        if self.len == 2:
-            self.status = R_STATUS_CRC
+        self.data_c = self.data_c + 1
+        self.sn_str = self.sn_str + x
+        if self.data_c == 4:
+            self.data_c = 0
+            self.status = R_STATUS_DTAT
+            if self.len-4 == 0:
+                self.status = R_STATUS_CRC
 
     def r_data(self,x):
         self.crc  = self.crc ^ string.atoi(x, 16)
         self.data_c = self.data_c + 1
         self.data = self.data + x
-        if self.data_c == (self.len-2):
+        if self.data_c == (self.len-4):
             self.status = R_STATUS_CRC
 
     def r_crc_fun(self,x):
-        self.crc_str = x 
+        self.crc_str = x
         # print "c_crc = %02X r_crc = %s" % (self.crc,x)
         if self.crc == string.atoi(x, 16):
             self.status = R_STATUS_END
@@ -105,8 +98,8 @@ class HexDecode():
         if x != "CA":
             self.clear()
         else:
-            cmd_str = self.header + self.len_str + self.cmd_str + \
-                      self.op_str + self.data + self.crc_str + self.end
+            cmd_str = self.header + self.len_str + self.sn_str + \
+                      self.data + self.crc_str + self.end
             return cmd_str
 
     def get_str(self,mode):
@@ -157,19 +150,19 @@ class HexDecode():
         print "cmd    = %s" % self.cmd_str
         print "type   = %s" % self.op_str
         print "data   = %s" % self.data
-        print "crc    = %s" % self.crc_str      
-        print "end    = %s" % self.end   
+        print "crc    = %s" % self.crc_str
+        print "end    = %s" % self.end
         # self.clear()
 
     def r_machine(self,x):
         char = "%02X" % ord(x)
-        # print "status = %d, char = %s" % (self.status, char ) 
+        # print "status = %d, char = %s" % (self.status, char )
         cmd_str = self.cmd_m[self.status](char)
         # print cmd_str
         return cmd_str
 
 if __name__=='__main__':
-    cmd_str = "5A 0B 0B 03 11 22 33 44 07 06 14 00 01 53 CA"
+    cmd_str = "5A 09 06 0F 42 40 17 06 09 01 01 1A CA"
     hex_decode = HexDecode()
     print u"测试指令：%s" % cmd_str
     cmd_str = cmd_str.replace(' ','')

@@ -21,6 +21,11 @@ from HexDecode  import *
 from ComSetting import *
 from ComMonitor import *
 
+CONNECT_CMD     = "5A 02 0D 01 0E CA"
+DIS_CONNECT_CMD = "5A 02 CC 01 CF CA"
+READ_UID_CMD    = "5A 03 55 49 44 5B CA"
+SET_TAG_CMD     = "5A 09 06 0F 42 40 17 06 09 01 01 1A CA"
+
 logging.basicConfig ( # 配置日志输出的方式及格式
     level = logging.DEBUG,
     filename = 'log.txt',
@@ -39,6 +44,10 @@ class CmdScript():
         self.time_dict = {}
         self.cmd_index = 0
         self.run_times = 0
+        self.add_cmd("connect"    ,CONNECT_CMD    , 1  )
+        self.add_cmd("dis_connect",DIS_CONNECT_CMD, 1  )
+        self.add_cmd("read_uid"   ,READ_UID_CMD   , 0.1)
+        self.add_cmd("set_tag"    ,SET_TAG_CMD    , 0.2)
 
     def add_cmd(self,name,value,timeout):
         self.cmds_list.append(name)
@@ -56,6 +65,9 @@ class CmdScript():
         else:
             return time_out,cmd_value
 
+    def change_cmd(self,cmd_name):
+        print "change_cmd_name"
+
 class DTQPutty(QMainWindow):
     def __init__(self, parent=None):
         super(DTQPutty, self).__init__(parent)
@@ -71,28 +83,32 @@ class DTQPutty(QMainWindow):
 
         self.resize(700, 600)
         self.setWindowTitle(u'滤网RFID授权软件 V2.0')
-        self.workSpace = QWorkspace()
-        self.setCentralWidget(self.workSpace)
 
-        self.create_new_window("CONSOLE")
-        self.window_dict["CONSOLE"].show()
-        self.window_dict["CONSOLE"].showMaximized()
+        self.com_edit = QTextEdit()
+        self.com_edit.setStyleSheet('QWidget {background-color:#111111}')
+        self.com_edit.setFont(QFont("Courier New", 10, False))
+        self.com_edit.setTextColor(QColor(200,200,200))
 
-        self.dock_com = QDockWidget(u"当前连接",self)
-        self.dock_com.setFeatures(QDockWidget.DockWidgetMovable)
-        self.dock_com.setAllowedAreas(Qt.LeftDockWidgetArea|Qt.RightDockWidgetArea)
-        self.tree_com = QTreeWidget()
-        self.tree_com.setFont(QFont("Courier New", 8, False))
-        self.tree_com.setColumnCount(2)
-        self.tree_com.setHeaderLabels([u'连接名',u'参数'])
-        self.tree_com.setColumnWidth(0, 90)
-        self.tree_com.setColumnWidth(1, 50)
+        self.led_item0 = QPushButton(u"串口1")
+        self.led_item1 = QPushButton(u"串口2")
+        self.led_item2 = QPushButton(u"串口3")
+        self.led_item3 = QPushButton(u"串口4")
+        l_vbox = QHBoxLayout()
+        l_vbox.addWidget(self.led_item0)
+        l_vbox.addWidget(self.led_item1)
+        l_vbox.addWidget(self.led_item2)
+        l_vbox.addWidget(self.led_item3)
 
-        self.root_com = QTreeWidgetItem(self.tree_com)
-        self.root_com.setText(0, "CONSOLE")
-        self.root_com.setText(1, "NONE")
-        self.dock_com.setWidget(self.tree_com)
-        self.addDockWidget(Qt.LeftDockWidgetArea,self.dock_com)
+        m_vbox = QVBoxLayout()
+        m_vbox.addLayout(l_vbox)
+        m_vbox.addWidget(self.com_edit)
+
+        m_frame = QFrame()
+        m_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        m_frame.setLayout(m_vbox)
+
+        self.setCentralWidget(m_frame)
+        self.com_edit.append("Open CONSOLE OK!")
 
         # get uart Config
         config = ConfigParser.ConfigParser()
@@ -106,19 +122,11 @@ class DTQPutty(QMainWindow):
         self.exit = QAction('Exit', self)
         self.exit.setShortcut('Ctrl+Q')
         self.exit.setStatusTip(u'退出')
-        self.dis_connect = QAction(u'断开连接', self)
-        self.dis_connect.setShortcut('Ctrl+D')
-        self.dis_connect.setStatusTip(u'断开与接收器的连接')
         self.new_session = QAction('New Session', self)
         self.new_session.setShortcut('Ctrl+O')
         self.new_session.setStatusTip(u'创建一个新的会话')
-        self.re_connect = QAction(u'重新连接', self)
-        self.re_connect.setShortcut('Ctrl+R')
-        self.re_connect.setStatusTip(u'重新连接接收器')
         self.connection = self.menubar.addMenu(u'&设置')
         self.connection.addAction(self.new_session)
-        self.connection.addAction(self.dis_connect)
-        self.connection.addAction(self.re_connect)
         self.connection.addAction(self.exit)
 
         # 退出程序
@@ -152,104 +160,22 @@ class DTQPutty(QMainWindow):
                 index = u"<font color=lightgreen>S[%d]:</font>" % self.monitor_dict[item].input_count
                 self.uart_update_text( item, index, u'脚本已经执行完毕...')
 
-    def tree_com_itemDoubleClicked(self,item, column):
-        com_name = unicode(item.text(0))
-        if com_name[0:2] == 'CO':
-            self.window_dict[com_name].show()
-
-    def tree_script_doubleClicked(self,item, column):
-        cmd_name = unicode(item.text(0))
-        parent=item.parent()
-        index_top = 0
-        index_row = -1
-
-        if parent is None:
-            index_top = self.tree_script.indexOfTopLevelItem(item)
-        else :
-            index_top =  self.tree_script.indexOfTopLevelItem(parent)
-            index_row = parent.indexOfChild(item)
-        # print( u'%s' % cmd_name, index_top, index_row)
-
-        if index_row > -1:
-            for item in self.com_dict:
-                self.monitor_dict[item].input_count = self.monitor_dict[item].input_count + 1
-                index  = u"<font color=lightgreen>S[%d]:</font>" % self.monitor_dict[item].input_count
-                cmd_value   = self.script_list[index_top].cmds_dict[cmd_name]
-                cmd_timeout = self.script_list[index_top].time_dict[cmd_name]
-                encode      = self.script_list[index_top].encode
-                # print cmd_timeout,cmd_value
-                self.uart_update_text( item, index, cmd_value)
-                logging.debug(u'发送数据:%s',cmd_value)
-                if encode == 'hex':
-                    cmd_value = cmd_value.replace(' ','')
-                    cmd_value = cmd_value.decode("hex")
-                self.com_dict[item].write(cmd_value)
-
-        if index_row == -1:
-            for item in self.com_dict:
-                cmd_value =  u"开始运行脚本：%s ..." % cmd_name
-                self.monitor_dict[item].input_count = self.monitor_dict[item].input_count + 1
-                index  = u"<font color=lightgreen>S[%d]:</font>" % self.monitor_dict[item].input_count
-                self.uart_update_text( item, index, cmd_value)
-                self.cur_script = self.script_list[index_top]
-                self.cur_script.cmd_index = 0
-                self.timer.start(1000)
-
-    def tree_script_itemDoubleClicked(self,item, column):
-        # print item
-        cmd_name = unicode(item.text(0))
-        # print cmd_name
-
-        for item in self.com_dict:
-            self.monitor_dict[item].input_count = self.monitor_dict[item].input_count + 1
-            index  = u"<font color=lightgreen>S[%d]:</font>" % self.monitor_dict[item].input_count
-
-            self.uart_update_text( item, index, self.script_list[0].cmds_dict[cmd_name])
-            logging.debug(u'发送数据:%s',self.script_list[0].cmds_dict[cmd_name])
-            self.com_dict[item].write(self.script_list[0].cmds_dict[cmd_name])
-
-    def create_new_window(self,name):
-        # 创建显示窗口
-        self.window_dict[name] = QMainWindow()
-        self.window_dict[name].setWindowTitle(name)
-        self.com_edit_dict[name] = QTextEdit()
-        self.com_edit_dict[name].setStyleSheet('QWidget {background-color:#111111}')
-        self.com_edit_dict[name].setFont(QFont("Courier New", 10, False))
-        self.com_edit_dict[name].setTextColor(QColor(200,200,200))
-        self.window_dict[name].setCentralWidget(self.com_edit_dict[name])
-        self.com_edit_dict[name].append("Open %s OK!" % name)
-        self.workSpace.addWindow(self.window_dict[name])
-
     def open_new_session(self):
-        com = ComSetting.get_port()
-        if com :
-            # 增加配置信息显示
-            logging.info(u"打开串口")
-            self.root_com = QTreeWidgetItem(self.tree_com)
-            self.root_com.setText(0, com.portstr)
-            child1 = QTreeWidgetItem(self.root_com)
-            child1.setText(0,'SPEED')
-            child1.setText(1, "%d" % com.baudrate)
-
-            # 创建显示窗口
-            self.create_new_window(com.portstr)
-
+        monitor = ComSetting.get_com_monitor()
+        if monitor :
             # 创建监听线程
-            self.monitor_dict[com.portstr] = ComMonitor(com)
-            self.com_dict[com.portstr]         = com
+            self.monitor_dict[monitor.com.portstr] = monitor
+            self.com_dict[monitor.com.portstr]     = monitor.com
 
-            self.connect(self.monitor_dict[com.portstr],
+            self.connect(self.monitor_dict[monitor.com.portstr],
                          SIGNAL('protocol_message(QString, QString)'),
                          self.update_edit)
-            self.connect(self.monitor_dict[com.portstr],
-                         SIGNAL('download_image_info(QString, QString)'),
-                         self.uart_update_download_image_info)
 
-            self.monitor_dict[com.portstr].start()
-            self.setWindowTitle(com.portstr + '-DTQPutty V0.1.0')
+            self.monitor_dict[monitor.com.portstr].start()
             logging.info(u"启动串口监听线程!")
+            self.com_edit.append(u"启动串口 %s 监听线程!" % monitor.com.portstr )
         else:
-            self.com_edit_dict["CONSOLE"].append(u"Error:打开串口出错！")
+            self.com_edit.append(u"Error:打开串口出错！")
 
     def add_script_fun1(self,file_path):
         # print file_path
@@ -295,15 +221,6 @@ class DTQPutty(QMainWindow):
     def add_script_fun(self):
         temp_image_path = unicode(QFileDialog.getOpenFileName(self, 'Open file', './', "txt files(*.inf)"))
         self.add_script_fun1(temp_image_path)
-
-    def uart_update_download_image_info(self,ser_str,data):
-        global down_load_image_flag
-
-        if down_load_image_flag == 2:
-            self.uart_update_text(ser_str,data)
-
-        if data[7:8] == '2':
-            self.monitor_dict[com.portstr].com.write('1')
 
     def merge_display(self):
         if self.mearge_flag == 0:
