@@ -49,10 +49,10 @@ class SNConfig():
         sn = byte1_code + byte2_1_code + byte2_2_3_4
         return sn
 
-class ComSetting(QDialog):
+class ComWork(QDialog):
     def __init__(self, parent=None):
         global ser
-        super(ComSetting, self).__init__(parent)
+        super(ComWork, self).__init__(parent)
         input_count     = 0
         self.port1_dict = {}
         self.port2_dict = {}
@@ -66,13 +66,14 @@ class ComSetting(QDialog):
         self.sn         = SNConfig()
         self.s_cmd.init()
         self.setWindowTitle(u"滤网RFID配置")
+        self.showMaximized()
 
-        self.clear_button = QPushButton(u"保存配置")
-        self.clear_button.setFont(QFont("Roman times",15,QFont.Bold))
-        self.clear_button.setFixedHeight(40)
+        self.e_button   = QPushButton(u"退出")
+        self.e_button.setFixedSize(120, 50)
+        self.e_button.setFont(QFont("Roman times",25,QFont.Bold))
+        e_layout = QHBoxLayout()
+        e_layout.addWidget(self.e_button)
 
-        c_hbox = QHBoxLayout()
-        c_hbox.addWidget(self.clear_button)
 
         self.dtq_id_label=QLabel(u"机台号:")
         self.dtq_id_lineedit = QLineEdit(u"0")
@@ -89,7 +90,6 @@ class ComSetting(QDialog):
             '%Y-%m-%d',time.localtime(time.time())))
 
         g_hbox = QGridLayout()
-        # g_hbox.setSpacing(10)
         g_hbox.addWidget(self.time_label           ,0,0)
         g_hbox.addWidget(self.time_lineedit        ,0,1)
         g_hbox.addWidget(self.dtq_id_label         ,0,2)
@@ -108,63 +108,69 @@ class ComSetting(QDialog):
         self.led_b = QImage('./data/ico/ledlightblue.ico')
         self.led_g = QImage('./data/ico/ledgreen.ico')
         self.led_r = QImage('./data/ico/ledred.ico')
-
-        self.com1_combo=QComboBox(self)
-        self.uart_scan(self.port1_dict,self.com1_combo)
-        self.com1_button = QPushButton(u"打开标签1")
+        self.com1_lable = QLabel(u"打开标签1")
+        self.com1_lable.setAlignment(Qt.AlignCenter)
         self.led1  = LED(40,self.led_b)
-        self.com2_combo=QComboBox(self)
-        self.uart_scan(self.port2_dict,self.com2_combo)
-        self.com2_button = QPushButton(u"打开标签2")
+        self.com2_lable = QLabel(u"打开标签2")
+        self.com2_lable.setAlignment(Qt.AlignCenter)
         self.led2  = LED(40,self.led_b)
-        self.com3_combo=QComboBox(self)
-        self.uart_scan(self.port3_dict,self.com3_combo)
-        self.com3_button = QPushButton(u"打开标签3")
+        self.com3_lable = QLabel(u"打开标签3")
+        self.com3_lable.setAlignment(Qt.AlignCenter)
         self.led3  = LED(40,self.led_b)
-        self.com4_combo=QComboBox(self)
-        self.uart_scan(self.port4_dict,self.com4_combo)
-        self.com4_button = QPushButton(u"打开标签4")
+        self.com4_lable = QLabel(u"打开标签4")
+        self.com4_lable.setAlignment(Qt.AlignCenter)
         self.led4  = LED(40,self.led_b)
         c_gbox = QGridLayout()
-        c_gbox.addWidget(self.com1_combo ,1,0)
-        c_gbox.addWidget(self.com2_combo ,1,1)
-        c_gbox.addWidget(self.com3_combo ,1,2)
-        c_gbox.addWidget(self.com4_combo ,1,3)
-        c_gbox.addWidget(self.com1_button,2,0)
-        c_gbox.addWidget(self.com2_button,2,1)
-        c_gbox.addWidget(self.com3_button,2,2)
-        c_gbox.addWidget(self.com4_button,2,3)
-        c_gbox.addWidget(self.led1       ,0,0)
-        c_gbox.addWidget(self.led2       ,0,1)
-        c_gbox.addWidget(self.led3       ,0,2)
-        c_gbox.addWidget(self.led4       ,0,3)
+        c_gbox.addWidget(self.led1      ,0,0)
+        c_gbox.addWidget(self.led2      ,0,1)
+        c_gbox.addWidget(self.led3      ,0,2)
+        c_gbox.addWidget(self.led4      ,0,3)
+        c_gbox.addWidget(self.com1_lable,1,0)
+        c_gbox.addWidget(self.com2_lable,1,1)
+        c_gbox.addWidget(self.com3_lable,1,2)
+        c_gbox.addWidget(self.com4_lable,1,3)
 
         com_frame = QFrame()
         com_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         com_frame.setLayout(c_gbox)
 
-        self.check_browser_label=QLabel(u"发送数据区:")
+        self.check_browser_label=QLabel(u"LOG日志:")
         self.check_browser_label.setFixedHeight(20)
         self.check_browser = QTextEdit()
         self.check_browser.setFont(QFont("Courier New", 10, QFont.Bold))
         self.check_browser.document().setMaximumBlockCount (1000);
-        self.check_browser.setFixedHeight(60)
+        # self.check_browser.setFixedHeight(350)
         b_vbox = QVBoxLayout()
         b_vbox.addWidget(self.check_browser_label )
         b_vbox.addWidget(self.check_browser       )
 
-        box = QVBoxLayout()
+        self.sw_label   = QLabel(u"滤网RFID标签授权")
+        self.sw_label.setFont(QFont("Roman times",40,QFont.Bold))
+        self.sw_label.setAlignment(Qt.AlignCenter)
 
+        self.zkxl_label = QLabel(u"版权所有：深圳中科讯联科技有限公司")
+        self.zkxl_label.setFont(QFont("Roman times",20,QFont.Bold))
+        self.zkxl_label.setAlignment(Qt.AlignCenter)
+
+        box = QVBoxLayout()
+        box.addItem(QSpacerItem(60,60,QSizePolicy.Expanding,QSizePolicy.Minimum))
+        box.addWidget(self.sw_label)
+        box.addStretch()
+        box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
         box.addWidget(com_frame)
-        box.addWidget(conf_frame)
+        box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
         box.addLayout(b_vbox)
-        box.addLayout(c_hbox)
-        # box.addWidget(self.clear_button)
+        box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
+        box.addLayout(e_layout)
+        box.addItem(QSpacerItem(30,30,QSizePolicy.Expanding,QSizePolicy.Minimum))
+        box.addWidget(self.zkxl_label)
+        box.addItem(QSpacerItem(30,30,QSizePolicy.Expanding,QSizePolicy.Minimum))
+
         self.setLayout(box)
-         # box.addLayout(c_hbox)
+
         self.config_data_sync()
 
-        self.clear_button.clicked.connect(self.clear_text)
+        self.e_button.clicked.connect(self.clear_text)
         # self.start_button.clicked.connect(self.band_start)
         self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
         # self.com_combo.currentIndexChanged.connect(self.change_uart)
@@ -215,8 +221,7 @@ class ComSetting(QDialog):
                 pass
 
     def clear_text(self):
-        # self.log_browser.clear()
-        print "clear"
+        print "exit"
         self.close()
 
     def uart_update_text(self,data):
@@ -317,15 +322,15 @@ class ComSetting(QDialog):
             ser.write(send_cmd)
 
     @staticmethod
-    def get_com_monitor(parent = None):
-        comsetting_dialog = ComSetting(parent)
+    def work_start(parent = None):
+        comsetting_dialog = ComWork(parent)
         result = comsetting_dialog.exec_()
 
         return (comsetting_dialog.ComMonitor)
 
 if __name__=='__main__':
     app = QApplication(sys.argv)
-    datburner = ComSetting()
+    datburner = ComWork()
     datburner.show()
     app.exec_()
 
