@@ -22,6 +22,7 @@ input_count   = 0
 LOGTIMEFORMAT = '%Y%m%d%H'
 log_time      = time.strftime( LOGTIMEFORMAT,time.localtime(time.time()))
 log_name      = "log-%s.txt" % log_time
+CONF_FONT_SIZE = 16
 
 class SNConfig():
     def __init__(self):
@@ -65,18 +66,28 @@ class ComWork(QDialog):
         e_layout.addWidget(self.e_button)
 
         self.dtq_id_label=QLabel(u"产线号  :")
+        self.dtq_id_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.dtq_id_lineedit = QLineEdit(u"0")
+        self.dtq_id_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.time_label=QLabel(u"生产日期:")
+        self.time_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.manufacturer_label=QLabel(u"生产厂家:")
+        self.manufacturer_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.manufacturer_lineedit = QLineEdit(u'FF')
+        self.manufacturer_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.mesh_type_label=QLabel(u"滤网类型:")
+        self.mesh_type_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.mesh_type_combo = QComboBox()
         self.mesh_type_combo.addItems([u'0x01:复合滤网\PM2.5滤网',u'0x02:甲醛滤网',
             u'0x03:塑料袋NFC标签',u'0x04:非法滤网',u'0xFF:没有标签'])
+        self.mesh_type_combo.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.des_label=QLabel(u"序列号  :")
+        self.des_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.des_lineedit = QLineEdit(u'FF FF FF FF')
+        self.des_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.time_lineedit = QLineEdit( time.strftime(
             '%Y-%m-%d',time.localtime(time.time())))
+        self.time_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
 
         g_hbox = QGridLayout()
         g_hbox.addWidget(self.time_label           ,0,0)
@@ -97,15 +108,19 @@ class ComWork(QDialog):
 
         self.com1_lable = QLabel(u"标签1")
         self.com1_lable.setAlignment(Qt.AlignCenter)
+        self.com1_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.led1  = LED(60)
         self.com2_lable = QLabel(u"标签2")
         self.com2_lable.setAlignment(Qt.AlignCenter)
+        self.com2_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.led2  = LED(60)
         self.com3_lable = QLabel(u"标签3")
         self.com3_lable.setAlignment(Qt.AlignCenter)
+        self.com3_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.led3  = LED(60)
         self.com4_lable = QLabel(u"标签4")
         self.com4_lable.setAlignment(Qt.AlignCenter)
+        self.com4_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.led4  = LED(60)
         c_gbox = QGridLayout()
 
