@@ -109,12 +109,11 @@ class sn_ui(QFrame):
 
 class tag_data():
     def __init__(self):
+        self.ser_list     = []
         self.ports_dict   = {}
         self.ser_dict     = {}
         self.monitor_dict = {}
-        # self.rcmd_dict    = {}
-        # self.scmd_dict    = {}
-
+        self.led_dict     = {}
 
 class tag_ui(QFrame):
     def __init__(self, parent=None):
@@ -174,12 +173,16 @@ class tag_ui(QFrame):
 
         if ser_index == 1:
             serial_port = str(self.com1_combo.currentText())
+            cur_led = self.led1
         if ser_index == 2:
             serial_port = str(self.com2_combo.currentText())
+            cur_led = self.led2
         if ser_index == 3:
             serial_port = str(self.com3_combo.currentText())
+            cur_led = self.led3
         if ser_index == 4:
             serial_port = str(self.com4_combo.currentText())
+            cur_led = self.led4
 
         try:
             ser = serial.Serial( self.tag.ports_dict[serial_port], 115200)
@@ -188,10 +191,16 @@ class tag_ui(QFrame):
 
         if mode == 1:
             if ser.isOpen() == True:
-                self.tag.ser_dict[serial_port]     = ser
-                self.tag.monitor_dict[serial_port] = ComMonitor(ser)
-                # self.tag.rcmd_dict[serial_port]    = HexDecode()
-                # self.tag.scmd_dict[serial_port]    = HexDecode()
+                if self.tag.monitor_dict.has_key(serial_port) == True:
+                    # self.tag.monitor_dict[serial_port]
+                    print "11111111"
+                else:
+                    self.tag.ser_list.append(serial_port)
+                    self.tag.ser_dict[serial_port]     = ser
+                    self.tag.monitor_dict[serial_port] = ComMonitor(ser)
+                    self.connect(self.tag.monitor_dict[serial_port],
+                        SIGNAL('r_cmd_message(QString)'),
+                        cur_led.set_color)
                 return serial_port
 
     def band_start(self):
@@ -206,9 +215,9 @@ class tag_ui(QFrame):
             if self.tag.ser_dict[serial_port].isOpen() == True:
                 button.setText(u"断开绑定标签%d" % button_index)
                 print "标签%d绑定标签:%s" % ( button_index, serial_port )
+                self.tag.monitor_dict[serial_port].start()
                 send_cmd  =  "5A 02 0D 01 0E CA"
                 send_cmd = str(send_cmd.replace(' ',''))
-                print send_cmd
                 send_cmd = send_cmd.decode("hex")
                 self.tag.ser_dict[serial_port].write(send_cmd)
 
@@ -216,19 +225,19 @@ class tag_ui(QFrame):
            button_str == u"断开绑定标签3" or button_str == u"断开绑定标签4":
 
             button_index = string.atoi( str(button_str[-1:]), 10 )
+            try:
+                serial_port  = self.tag.ser_list[button_index-1]
+            except IndexError:
+                return
+
             button.setText(u"绑定标签%d" % button_index)
 
             if self.tag.ser_dict[serial_port].isOpen() == True:
                 print "断开标签%d绑定串口:%s" % ( button_index, serial_port )
-                send_cmd  =  "5A 02 0D 00 0F CA"
-                # log_str   = u"S[%d]：%s" % (input_count,send_cmd)
-                # self.log_browser.append( log_str )
-                # logging.debug( log_str )
+                send_cmd  =  "5A 02 CC 01 CF CA"
                 send_cmd = str(send_cmd.replace(' ',''))
                 send_cmd = send_cmd.decode("hex")
-                ser.write(send_cmd)
-
-
+                self.tag.ser_dict[serial_port].write(send_cmd)
 
 class ComSetting(QDialog):
     def __init__(self, parent=None):
@@ -240,12 +249,12 @@ class ComSetting(QDialog):
         self.clear_button.setFont(QFont("Roman times",15,QFont.Bold))
         self.clear_button.setFixedHeight(40)
 
-        conf_frame = sn_ui()
-        com_frame  = tag_ui()
+        self.conf_frame = sn_ui()
+        self.com_frame  = tag_ui()
 
         box = QVBoxLayout()
-        box.addWidget(com_frame)
-        box.addWidget(conf_frame)
+        box.addWidget(self.com_frame)
+        box.addWidget(self.conf_frame)
         box.addWidget(self.clear_button)
         self.setLayout(box)
 
@@ -295,7 +304,8 @@ class ComSetting(QDialog):
         comsetting_dialog = ComSetting(parent)
         result = comsetting_dialog.exec_()
 
-        return (comsetting_dialog.ComMonitor)
+        return (comsetting_dialog.com_frame.tag.ser_list,
+                comsetting_dialog.com_frame.tag.monitor_dict)
 
 if __name__=='__main__':
     app = QApplication(sys.argv)
@@ -303,9 +313,9 @@ if __name__=='__main__':
     datburner.show()
     app.exec_()
 
-    if ser != 0:
+    # if ser != 0:
         # datburner.find_card_stop()
-        datburner.setting_uart(0)
+        # datburner.setting_uart(0)
 
 
 

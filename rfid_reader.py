@@ -25,7 +25,7 @@ class RFIDReader(QWidget):
     def __init__(self, parent=None):
         super(RFIDReader, self).__init__(parent)
         self.monitor_dict  = {}
-        self.com_dict      = {}
+        self.ser_list      = []
 
         self.showMaximized()
         self.setWindowTitle(u'滤网RFID标签授权软件 V2.0')
@@ -87,18 +87,11 @@ class RFIDReader(QWidget):
 
     def open_new_session(self):
         if login():
-            monitor = ComSetting.get_com_monitor()
-            if monitor :
+            self.ser_list,self.monitor_dict = ComSetting.get_com_monitor()
+            if self.monitor_dict :
                 # 创建监听线程
-                self.monitor_dict[monitor.com.portstr] = monitor
-                self.com_dict[monitor.com.portstr]     = monitor.com
-
-                # self.connect(self.monitor_dict[monitor.com.portstr],
-                             # SIGNAL('protocol_message(QString, QString)'),
-                             # self.update_edit)
-
-                self.monitor_dict[monitor.com.portstr].start()
-                logging.info(u"启动串口监听线程!")
+                for item in self.ser_list:
+                    print u"启动串口监听线程! %s " % item
 
     def start_work(self):
         # if login():

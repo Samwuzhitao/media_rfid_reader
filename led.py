@@ -19,6 +19,13 @@ class LED(QLabel):
         self.setPixmap(QPixmap.fromImage(self.color_dict['blue']).scaled(self.size(),
             Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
-    def set_color(self,color):
-        self.setPixmap(QPixmap.fromImage(self.color_dict[color]).scaled(self.size(),
-            Qt.KeepAspectRatio, Qt.SmoothTransformation))
+    def set_color(self,data):
+        if str(data) == "5A020D010ECA":
+            self.setPixmap(QPixmap.fromImage(self.color_dict['green']).scaled(self.size(),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        if str(data) == "5A020D020DCA":
+            self.setPixmap(QPixmap.fromImage(self.color_dict['red']).scaled(self.size(),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation))
+        if str(data) == "5A02CC01CFCA":
+            self.setPixmap(QPixmap.fromImage(self.color_dict['blue']).scaled(self.size(),
+                Qt.KeepAspectRatio, Qt.SmoothTransformation))
