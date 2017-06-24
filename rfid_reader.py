@@ -17,9 +17,9 @@ from PyQt4.QtGui  import *
 from ctypes import *
 from math import *
 
-from ComSetting   import *
+from rfid_setting import *
 from login_dialog import *
-from ComWork      import *
+from rfid_worker  import *
 
 class RFIDReader(QWidget):
     def __init__(self, parent=None):
@@ -103,6 +103,7 @@ class RFIDReader(QWidget):
     def start_work(self):
         # if login():
         monitor = ComWork.work_start()
+
         if monitor :
             # 创建监听线程
             self.monitor_dict[monitor.com.portstr] = monitor

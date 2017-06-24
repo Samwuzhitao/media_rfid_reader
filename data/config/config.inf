@@ -1,0 +1,12 @@
+[serial]
+serial_num:4
+port1:COM10
+port2:COM11
+port3:COM12
+port4:COM13
+
+[window]
+start_x:100
+start_y:100
+x_size:600
+y_size:600

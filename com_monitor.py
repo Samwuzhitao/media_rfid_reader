@@ -8,7 +8,7 @@ import string
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
 
-from HexDecode  import *
+from cmd_rev_decode import *
 
 class ComMonitor(QThread):
     def __init__(self,com,parent=None):
@@ -16,7 +16,6 @@ class ComMonitor(QThread):
         self.working  = True
         self.num      = 0
         self.com      = com
-        # print self.com
         self.input_count      = 0
         self.decode_type_flag = 0
         self.hex_decode_show_style = 1

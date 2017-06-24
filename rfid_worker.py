@@ -13,15 +13,17 @@ import logging
 import json
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
-from HexDecode    import *
-from ComMonitor   import *
-from led          import *
+
+from cmd_rev_decode import *
+from com_monitor    import *
+from led            import *
 
 ser           = 0
 input_count   = 0
 LOGTIMEFORMAT = '%Y%m%d%H'
 log_time      = time.strftime( LOGTIMEFORMAT,time.localtime(time.time()))
 log_name      = "log-%s.txt" % log_time
+CONF_FONT_SIZE = 16
 
 class SNConfig():
     def __init__(self):
@@ -39,10 +41,10 @@ class SNConfig():
         sn = byte1_code + byte2_1_code + byte2_2_3_4
         return sn
 
-class ComSetting(QDialog):
+class ComWork(QDialog):
     def __init__(self, parent=None):
         global ser
-        super(ComSetting, self).__init__(parent)
+        super(ComWork, self).__init__(parent)
         input_count     = 0
         self.port1_dict = {}
         self.port2_dict = {}
@@ -55,89 +57,113 @@ class ComSetting(QDialog):
         self.s_cmd      = HexDecode()
         self.sn         = SNConfig()
         self.s_cmd.init()
-        self.setWindowTitle(u"滤网RFID配置")
+        self.setWindowTitle(u"滤网RFID生产")
+        self.showMaximized()
 
-        self.clear_button = QPushButton(u"保存配置")
-        self.clear_button.setFont(QFont("Roman times",15,QFont.Bold))
-        self.clear_button.setFixedHeight(40)
-
-        c_hbox = QHBoxLayout()
-        c_hbox.addWidget(self.clear_button)
+        self.e_button   = QPushButton(u"退出")
+        self.e_button.setFixedSize(120, 50)
+        self.e_button.setFont(QFont("Roman times",25,QFont.Bold))
+        e_layout = QHBoxLayout()
+        e_layout.addWidget(self.e_button)
 
         self.dtq_id_label=QLabel(u"产线号  :")
+        self.dtq_id_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.dtq_id_lineedit = QLineEdit(u"0")
+        self.dtq_id_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.time_label=QLabel(u"生产日期:")
+        self.time_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.manufacturer_label=QLabel(u"生产厂家:")
+        self.manufacturer_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.manufacturer_lineedit = QLineEdit(u'FF')
+        self.manufacturer_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.mesh_type_label=QLabel(u"滤网类型:")
+        self.mesh_type_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.mesh_type_combo = QComboBox()
         self.mesh_type_combo.addItems([u'0x01:复合滤网\PM2.5滤网',u'0x02:甲醛滤网',
             u'0x03:塑料袋NFC标签',u'0x04:非法滤网',u'0xFF:没有标签'])
+        self.mesh_type_combo.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.des_label=QLabel(u"序列号  :")
+        self.des_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.des_lineedit = QLineEdit(u'FF FF FF FF')
+        self.des_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.time_lineedit = QLineEdit( time.strftime(
             '%Y-%m-%d',time.localtime(time.time())))
+        self.time_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
 
         g_hbox = QGridLayout()
-        # g_hbox.setSpacing(10)
         g_hbox.addWidget(self.time_label           ,0,0)
         g_hbox.addWidget(self.time_lineedit        ,0,1)
         g_hbox.addWidget(self.dtq_id_label         ,0,2)
         g_hbox.addWidget(self.dtq_id_lineedit      ,0,3)
-        g_hbox.addWidget(self.des_label            ,1,0)
-        g_hbox.addWidget(self.des_lineedit         ,1,1,1,3)
         g_hbox.addWidget(self.mesh_type_label      ,2,0)
         g_hbox.addWidget(self.mesh_type_combo      ,2,1)
         g_hbox.addWidget(self.manufacturer_label   ,2,2)
         g_hbox.addWidget(self.manufacturer_lineedit,2,3)
+        # g_hbox.addItem(QSpacerItem(10,10,QSizePolicy.Expanding,QSizePolicy.Minimum),2,0,2,3)
+        g_hbox.addWidget(self.des_label            ,1,0)
+        g_hbox.addWidget(self.des_lineedit         ,1,1,1,3)
 
         conf_frame = QFrame()
         conf_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         conf_frame.setLayout(g_hbox)
 
-        self.com1_combo=QComboBox(self)
-        self.uart_scan(self.port1_dict,self.com1_combo)
-        self.com1_button = QPushButton(u"绑定串口1")
-        self.led1  = LED(40)
-        self.com2_combo=QComboBox(self)
-        self.uart_scan(self.port2_dict,self.com2_combo)
-        self.com2_button = QPushButton(u"绑定串口2")
-        self.led2  = LED(40)
-        self.com3_combo=QComboBox(self)
-        self.uart_scan(self.port3_dict,self.com3_combo)
-        self.com3_button = QPushButton(u"绑定串口3")
-        self.led3  = LED(40)
-        self.com4_combo=QComboBox(self)
-        self.uart_scan(self.port4_dict,self.com4_combo)
-        self.com4_button = QPushButton(u"绑定串口4")
-        self.led4  = LED(40)
+        self.com1_lable = QLabel(u"标签1")
+        self.com1_lable.setAlignment(Qt.AlignCenter)
+        self.com1_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
+        self.led1  = LED(60)
+        self.com2_lable = QLabel(u"标签2")
+        self.com2_lable.setAlignment(Qt.AlignCenter)
+        self.com2_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
+        self.led2  = LED(60)
+        self.com3_lable = QLabel(u"标签3")
+        self.com3_lable.setAlignment(Qt.AlignCenter)
+        self.com3_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
+        self.led3  = LED(60)
+        self.com4_lable = QLabel(u"标签4")
+        self.com4_lable.setAlignment(Qt.AlignCenter)
+        self.com4_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
+        self.led4  = LED(60)
         c_gbox = QGridLayout()
-        c_gbox.addWidget(self.led1       ,0,0)
-        c_gbox.addWidget(self.led2       ,0,1)
-        c_gbox.addWidget(self.led3       ,0,2)
-        c_gbox.addWidget(self.led4       ,0,3)
-        c_gbox.addWidget(self.com1_combo ,1,0)
-        c_gbox.addWidget(self.com2_combo ,1,1)
-        c_gbox.addWidget(self.com3_combo ,1,2)
-        c_gbox.addWidget(self.com4_combo ,1,3)
-        c_gbox.addWidget(self.com1_button,2,0)
-        c_gbox.addWidget(self.com2_button,2,1)
-        c_gbox.addWidget(self.com3_button,2,2)
-        c_gbox.addWidget(self.com4_button,2,3)
 
-        com_frame = QFrame()
-        com_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
-        com_frame.setLayout(c_gbox)
+        c_gbox.addWidget(self.led1      ,0,0)
+        c_gbox.addWidget(self.led2      ,0,1)
+        c_gbox.addWidget(self.led3      ,0,2)
+        c_gbox.addWidget(self.led4      ,0,3)
+        c_gbox.addWidget(self.com1_lable,1,0)
+        c_gbox.addWidget(self.com2_lable,1,1)
+        c_gbox.addWidget(self.com3_lable,1,2)
+        c_gbox.addWidget(self.com4_lable,1,3)
 
+        # com_frame = QFrame()
+        # com_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
+        # com_frame.setLayout(c_gbox)
+
+        self.sw_label   = QLabel(u"滤网RFID标签授权")
+        self.sw_label.setFont(QFont("Roman times",40,QFont.Bold))
+        self.sw_label.setAlignment(Qt.AlignCenter)
+
+        self.zkxl_label = QLabel(u"版权所有：深圳中科讯联科技有限公司")
+        self.zkxl_label.setFont(QFont("Roman times",20,QFont.Bold))
+        self.zkxl_label.setAlignment(Qt.AlignCenter)
 
         box = QVBoxLayout()
-        box.addWidget(com_frame)
+        box.addItem(QSpacerItem(60,60,QSizePolicy.Expanding,QSizePolicy.Minimum))
+        box.addWidget(self.sw_label)
+        box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
         box.addWidget(conf_frame)
-        box.addLayout(c_hbox)
+        box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
+        box.addLayout(c_gbox)
+        box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
+        box.addLayout(e_layout)
+        box.addItem(QSpacerItem(30,30,QSizePolicy.Expanding,QSizePolicy.Minimum))
+        box.addWidget(self.zkxl_label)
+        box.addItem(QSpacerItem(30,30,QSizePolicy.Expanding,QSizePolicy.Minimum))
+
         self.setLayout(box)
+
         self.config_data_sync()
 
-        self.clear_button.clicked.connect(self.clear_text)
+        self.e_button.clicked.connect(self.clear_text)
         # self.start_button.clicked.connect(self.band_start)
         self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
         # self.com_combo.currentIndexChanged.connect(self.change_uart)
@@ -188,8 +214,7 @@ class ComSetting(QDialog):
                 pass
 
     def clear_text(self):
-        # self.log_browser.clear()
-        print "clear"
+        print "exit"
         self.close()
 
     def uart_update_text(self,data):
@@ -290,15 +315,15 @@ class ComSetting(QDialog):
             ser.write(send_cmd)
 
     @staticmethod
-    def get_com_monitor(parent = None):
-        comsetting_dialog = ComSetting(parent)
+    def work_start(parent = None):
+        comsetting_dialog = ComWork(parent)
         result = comsetting_dialog.exec_()
 
         return (comsetting_dialog.ComMonitor)
 
 if __name__=='__main__':
     app = QApplication(sys.argv)
-    datburner = ComSetting()
+    datburner = ComWork()
     datburner.show()
     app.exec_()
 
