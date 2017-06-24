@@ -15,23 +15,13 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
 from HexDecode    import *
 from ComMonitor   import *
+from led          import *
 
 ser           = 0
 input_count   = 0
 LOGTIMEFORMAT = '%Y%m%d%H'
 log_time      = time.strftime( LOGTIMEFORMAT,time.localtime(time.time()))
 log_name      = "log-%s.txt" % log_time
-
-class LED(QLabel):
-    def __init__(self,x,led,parent=None):
-        super(LED, self).__init__(parent)
-        self.resize(x,x)
-        self.setPixmap(QPixmap.fromImage(led).scaled(self.size(),
-            Qt.KeepAspectRatio, Qt.SmoothTransformation))
-
-    def set_color(self,led):
-        self.setPixmap(QPixmap.fromImage(led).scaled(self.size(),
-            Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
 class SNConfig():
     def __init__(self):
@@ -105,26 +95,24 @@ class ComSetting(QDialog):
         conf_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         conf_frame.setLayout(g_hbox)
 
-        self.led_b = QImage('./data/ico/ledlightblue.ico')
-        self.led_g = QImage('./data/ico/ledgreen.ico')
-        self.led_r = QImage('./data/ico/ledred.ico')
+
 
         self.com1_combo=QComboBox(self)
         self.uart_scan(self.port1_dict,self.com1_combo)
         self.com1_button = QPushButton(u"打开标签1")
-        self.led1  = LED(40,self.led_b)
+        self.led1  = LED(40)
         self.com2_combo=QComboBox(self)
         self.uart_scan(self.port2_dict,self.com2_combo)
         self.com2_button = QPushButton(u"打开标签2")
-        self.led2  = LED(40,self.led_b)
+        self.led2  = LED(40)
         self.com3_combo=QComboBox(self)
         self.uart_scan(self.port3_dict,self.com3_combo)
         self.com3_button = QPushButton(u"打开标签3")
-        self.led3  = LED(40,self.led_b)
+        self.led3  = LED(40)
         self.com4_combo=QComboBox(self)
         self.uart_scan(self.port4_dict,self.com4_combo)
         self.com4_button = QPushButton(u"打开标签4")
-        self.led4  = LED(40,self.led_b)
+        self.led4  = LED(40)
         c_gbox = QGridLayout()
         c_gbox.addWidget(self.com1_combo ,1,0)
         c_gbox.addWidget(self.com2_combo ,1,1)

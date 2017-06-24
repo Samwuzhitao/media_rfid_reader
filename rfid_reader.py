@@ -35,13 +35,11 @@ class RFIDReader(QWidget):
         self.setPalette(palette1)
 
         self.m_button   = QPushButton(u"1.管理者操作  ")
-        # self.m_button.setFixedSize(400, 40)
         self.m_button.setStyleSheet(
             "QPushButton{border:1px solid rgb(85,85,255);background:rgb(85,85,255)}"
             "QPushButton:hover{border-color:lightgray;}")
         self.m_button.setFont(QFont("Roman times",25,QFont.Bold))
         self.p_button   = QPushButton(u"2.产线工人操作")
-        # self.p_button.setFixedSize(400, 40)
         self.p_button.setStyleSheet(
             "QPushButton{border:1px solid rgb(85,85,255);background:rgb(85,85,255)}"
             "QPushButton:hover{border-color:lightgray;}")

@@ -15,23 +15,13 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
 from HexDecode    import *
 from ComMonitor   import *
+from led          import *
 
 ser           = 0
 input_count   = 0
 LOGTIMEFORMAT = '%Y%m%d%H'
 log_time      = time.strftime( LOGTIMEFORMAT,time.localtime(time.time()))
 log_name      = "log-%s.txt" % log_time
-
-class LED(QLabel):
-    def __init__(self,x,led,parent=None):
-        super(LED, self).__init__(parent)
-        self.resize(x,x)
-        self.setPixmap(QPixmap.fromImage(led).scaled(self.size(),
-            Qt.KeepAspectRatio, Qt.SmoothTransformation))
-
-    def set_color(self,led):
-        self.setPixmap(QPixmap.fromImage(led).scaled(self.size(),
-            Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
 class SNConfig():
     def __init__(self):
@@ -105,21 +95,18 @@ class ComWork(QDialog):
         conf_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         conf_frame.setLayout(g_hbox)
 
-        self.led_b = QImage('./data/ico/ledlightblue.ico')
-        self.led_g = QImage('./data/ico/ledgreen.ico')
-        self.led_r = QImage('./data/ico/ledred.ico')
         self.com1_lable = QLabel(u"打开标签1")
         self.com1_lable.setAlignment(Qt.AlignCenter)
-        self.led1  = LED(40,self.led_b)
+        self.led1  = LED(40)
         self.com2_lable = QLabel(u"打开标签2")
         self.com2_lable.setAlignment(Qt.AlignCenter)
-        self.led2  = LED(40,self.led_b)
+        self.led2  = LED(40)
         self.com3_lable = QLabel(u"打开标签3")
         self.com3_lable.setAlignment(Qt.AlignCenter)
-        self.led3  = LED(40,self.led_b)
+        self.led3  = LED(40)
         self.com4_lable = QLabel(u"打开标签4")
         self.com4_lable.setAlignment(Qt.AlignCenter)
-        self.led4  = LED(40,self.led_b)
+        self.led4  = LED(40)
         c_gbox = QGridLayout()
         c_gbox.addWidget(self.led1      ,0,0)
         c_gbox.addWidget(self.led2      ,0,1)
