@@ -28,7 +28,6 @@ class RFIDReader(QWidget):
         self.com_dict      = {}
 
         self.showMaximized()
-        # self.resize(600,500)
         self.setWindowTitle(u'滤网RFID标签授权软件 V2.0')
         palette1 = QPalette()
         palette1.setColor(self.backgroundRole(), QColor(85,85,255))
@@ -76,6 +75,15 @@ class RFIDReader(QWidget):
         self.e_button.clicked.connect(self.close)
         self.m_button.clicked.connect(self.open_new_session)
         self.p_button.clicked.connect(self.start_work)
+
+    def keyPressEvent(self, e):
+        print e.key()
+        if e.key() == Qt.Key_Escape: # Enter键
+            self.close()
+        if e.key() == Qt.Key_1: # Enter键
+            self.open_new_session()
+        if e.key() == Qt.Key_2: # Enter键
+            self.start_work()
 
     def open_new_session(self):
         if login():
