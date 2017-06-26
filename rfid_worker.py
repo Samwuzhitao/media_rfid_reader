@@ -42,10 +42,12 @@ class SNConfig():
         return sn
 
 class ComWork(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self,ser_list,monitor_dict,parent=None):
         global ser
         super(ComWork, self).__init__(parent)
         input_count     = 0
+        self.ser_list     = ser_list
+        self.monitor_dict = monitor_dict
         self.port1_dict = {}
         self.port2_dict = {}
         self.port3_dict = {}
@@ -162,11 +164,26 @@ class ComWork(QDialog):
         self.setLayout(box)
 
         self.config_data_sync()
+        self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
         # self.start_button.clicked.connect(self.band_start)
         self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
         # self.com_combo.currentIndexChanged.connect(self.change_uart)
+
+    def led_status_sync(self):
+        index = 0
+        for item in self.ser_list:
+            index = index + 1
+            if self.monitor_dict[item].com.isOpen() == True:
+                if index == 1:
+                    self.led1.set_color("green")
+                if index == 2:
+                    self.led2.set_color("green")
+                if index == 3:
+                    self.led3.set_color("green")
+                if index == 4:
+                    self.led4.set_color("green")
 
     def sync_sn_str(self):
         data_str = ''
@@ -315,8 +332,8 @@ class ComWork(QDialog):
             ser.write(send_cmd)
 
     @staticmethod
-    def work_start(parent = None):
-        comsetting_dialog = ComWork(parent)
+    def work_start(ser_list,monitor_dict,parent = None):
+        comsetting_dialog = ComWork(ser_list,monitor_dict,parent)
         result = comsetting_dialog.exec_()
 
         return (comsetting_dialog.ComMonitor)

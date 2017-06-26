@@ -31,4 +31,4 @@ class ComMonitor(QThread):
 
                 if recv_str :
                     self.rcmd.clear()
-                    self.emit(SIGNAL('r_cmd_message( QString)'),recv_str)
+                    self.emit(SIGNAL('r_cmd_message(QString, QString)'),self.com.portstr,recv_str)

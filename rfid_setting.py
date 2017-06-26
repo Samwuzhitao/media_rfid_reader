@@ -123,18 +123,22 @@ class tag_ui(QFrame):
         self.uart_scan(self.com1_combo)
         self.com1_button = QPushButton(u"绑定标签1")
         self.led1  = LED(40)
+        # self.tag.led_list.append(self.led1)
         self.com2_combo=QComboBox(self)
         self.uart_scan(self.com2_combo)
         self.com2_button = QPushButton(u"绑定标签2")
         self.led2  = LED(40)
+        # self.tag.led_list.append(self.led2)
         self.com3_combo=QComboBox(self)
         self.uart_scan(self.com3_combo)
         self.com3_button = QPushButton(u"绑定标签3")
         self.led3  = LED(40)
+        # self.tag.led_list.append(self.led3)
         self.com4_combo=QComboBox(self)
         self.uart_scan(self.com4_combo)
         self.com4_button = QPushButton(u"绑定标签4")
         self.led4  = LED(40)
+        # self.tag.led_list.append(self.led4)
         c_gbox = QGridLayout()
         c_gbox.addWidget(self.led1       ,0,0)
         c_gbox.addWidget(self.led2       ,0,1)
@@ -173,16 +177,16 @@ class tag_ui(QFrame):
 
         if ser_index == 1:
             serial_port = str(self.com1_combo.currentText())
-            cur_led = self.led1
+            self.tag.led_dict[serial_port] = self.led1
         if ser_index == 2:
             serial_port = str(self.com2_combo.currentText())
-            cur_led = self.led2
+            self.tag.led_dict[serial_port]  = self.led2
         if ser_index == 3:
             serial_port = str(self.com3_combo.currentText())
-            cur_led = self.led3
+            self.tag.led_dict[serial_port]  = self.led3
         if ser_index == 4:
             serial_port = str(self.com4_combo.currentText())
-            cur_led = self.led4
+            self.tag.led_dict[serial_port]  = self.led4
 
         try:
             ser = serial.Serial( self.tag.ports_dict[serial_port], 115200)
@@ -199,8 +203,8 @@ class tag_ui(QFrame):
                     self.tag.ser_dict[serial_port]     = ser
                     self.tag.monitor_dict[serial_port] = ComMonitor(ser)
                     self.connect(self.tag.monitor_dict[serial_port],
-                        SIGNAL('r_cmd_message(QString)'),
-                        cur_led.set_color)
+                        SIGNAL('r_cmd_message(QString,QString)'),
+                        self.sync_rf_config_data)
                 return serial_port
 
     def band_start(self):
@@ -212,6 +216,7 @@ class tag_ui(QFrame):
 
             button_index = string.atoi( str(button_str[-1:]), 10 )
             serial_port = self.setting_uart(button_index,1)
+
             if self.tag.ser_dict[serial_port].isOpen() == True:
                 button.setText(u"断开绑定标签%d" % button_index)
                 print "标签%d绑定标签:%s" % ( button_index, serial_port )
@@ -239,6 +244,15 @@ class tag_ui(QFrame):
                 send_cmd = send_cmd.decode("hex")
                 self.tag.ser_dict[serial_port].write(send_cmd)
 
+    def sync_rf_config_data(self,port,data):
+        port = str(port)
+        if str(data) == "5A020D010ECA":
+            self.tag.led_dict[port].set_color("green")
+        if str(data) == "5A020D020DCA":
+            self.tag.led_dict[port].set_color("red")
+        if str(data) == "5A02CC01CFCA":
+            self.tag.led_dict[port].set_color("blue")
+
 class ComSetting(QDialog):
     def __init__(self, parent=None):
         global ser
@@ -257,6 +271,8 @@ class ComSetting(QDialog):
         box.addWidget(self.conf_frame)
         box.addWidget(self.clear_button)
         self.setLayout(box)
+
+
 
     def clear_text(self):
         print "clear"
