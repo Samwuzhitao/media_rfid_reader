@@ -13,7 +13,7 @@ import logging
 import json
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
-
+import ConfigParser
 from cmd_rev_decode import *
 from com_monitor    import *
 from led            import *
@@ -26,9 +26,10 @@ log_name      = "log-%s.txt" % log_time
 
 class sn_data():
     def __init__(self):
-        self.date    = ""
-        self.machine = ""
-        self.number  = 0
+        self.date      = ""
+        self.machine   = 0
+        self.number    = 0
+        self.mesh      = None
 
     def get_sn(self):
         date_year = string.atoi(self.date[0:2],10)-17
@@ -41,8 +42,10 @@ class sn_data():
         return sn
 
 class sn_ui(QFrame):
-    def __init__(self, parent=None):
+    def __init__(self, config, file_name, parent=None):
         self.sn = sn_data()
+        self.config = config
+        self.config_file_name  = file_name
         super(sn_ui, self).__init__(parent)
         self.dtq_id_label=QLabel(u"产线号  :")
         self.dtq_id_lineedit = QLineEdit(u"0")
@@ -69,6 +72,9 @@ class sn_ui(QFrame):
         g_hbox.addWidget(self.mesh_type_combo      ,2,1)
         g_hbox.addWidget(self.manufacturer_label   ,2,2)
         g_hbox.addWidget(self.manufacturer_lineedit,2,3)
+
+        self.sync_sn_str()
+        self.des_lineedit.setText(self.sn.get_sn())
 
         self.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         self.setLayout(g_hbox)
@@ -103,21 +109,35 @@ class sn_ui(QFrame):
         self.sn.machine = mac_str
 
     def config_data_sync(self):
-        # self.s_cmd.init()
         self.sync_sn_str()
         self.des_lineedit.setText(self.sn.get_sn())
+
+        self.config.set('SN', 'date'   , self.sn.date    )
+        self.config.set('SN', 'machine', self.sn.machine )
+        self.config.set('SN', 'number' , self.sn.number  )
+        self.config.set('SN', 'mesh'   , self.sn.mesh    )
+        self.config.set('SN', 'sn'     , self.sn.get_sn())
+
+        self.config.write(open(self.config_file_name,"w"))
+
 
 class tag_data():
     def __init__(self):
         self.ser_list     = []
+        self.ser_list_index = {}
         self.ports_dict   = {}
         self.ser_dict     = {}
         self.monitor_dict = {}
         self.led_dict     = {}
 
 class tag_ui(QFrame):
-    def __init__(self, parent=None):
+    def __init__(self, config, file_name, parent=None):
         self.tag = tag_data()
+        # get uart Config
+        self.config = config
+        self.config_file_name  = file_name
+        # file_num = config.get('script', 'file_num')
+
         super(tag_ui, self).__init__(parent)
         self.com1_combo=QComboBox(self)
         self.uart_scan(self.com1_combo)
@@ -178,16 +198,19 @@ class tag_ui(QFrame):
         if ser_index == 1:
             serial_port = str(self.com1_combo.currentText())
             self.tag.led_dict[serial_port] = self.led1
+            self.tag.ser_list_index[serial_port] = ser_index
         if ser_index == 2:
             serial_port = str(self.com2_combo.currentText())
             self.tag.led_dict[serial_port]  = self.led2
+            self.tag.ser_list_index[serial_port] = ser_index
         if ser_index == 3:
             serial_port = str(self.com3_combo.currentText())
             self.tag.led_dict[serial_port]  = self.led3
+            self.tag.ser_list_index[serial_port] = ser_index
         if ser_index == 4:
             serial_port = str(self.com4_combo.currentText())
             self.tag.led_dict[serial_port]  = self.led4
-
+            self.tag.ser_list_index[serial_port] = ser_index
         try:
             ser = serial.Serial( self.tag.ports_dict[serial_port], 115200)
         except serial.SerialException:
@@ -246,12 +269,21 @@ class tag_ui(QFrame):
 
     def sync_rf_config_data(self,port,data):
         port = str(port)
-        if str(data) == "5A020D010ECA":
-            self.tag.led_dict[port].set_color("green")
-        if str(data) == "5A020D020DCA":
-            self.tag.led_dict[port].set_color("red")
-        if str(data) == "5A02CC01CFCA":
-            self.tag.led_dict[port].set_color("blue")
+        # 端口连接指令
+        if str(data) == "5A020D010ECA" or str(data) == "5A020D020DCA" or str(data) == "5A02CC01CFCA":
+            if str(data) == "5A020D010ECA":
+                self.tag.led_dict[port].set_color("green")
+                self.config.set('serial', 'port%d' %  self.tag.ser_list_index[port], port )
+            if str(data) == "5A020D020DCA":
+                self.tag.led_dict[port].set_color("red")
+                self.config.delete('serial', 'port%d' %  self.tag.ser_list_index[port], port )
+            if str(data) == "5A02CC01CFCA":
+                self.tag.led_dict[port].set_color("blue")
+            self.config.write(open(self.config_file_name,"w"))
+
+
+
+
 
 class ComSetting(QDialog):
     def __init__(self, parent=None):
@@ -263,8 +295,12 @@ class ComSetting(QDialog):
         self.clear_button.setFont(QFont("Roman times",15,QFont.Bold))
         self.clear_button.setFixedHeight(40)
 
-        self.conf_frame = sn_ui()
-        self.com_frame  = tag_ui()
+        self.config = ConfigParser.ConfigParser()
+        self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
+        self.config.readfp(open(self.config_file_name, "rb"))
+
+        self.conf_frame = sn_ui( self.config, self.config_file_name )
+        self.com_frame  = tag_ui(self.config, self.config_file_name )
 
         box = QVBoxLayout()
         box.addWidget(self.com_frame)
@@ -272,48 +308,12 @@ class ComSetting(QDialog):
         box.addWidget(self.clear_button)
         self.setLayout(box)
 
+        self.clear_button.clicked.connect(self.clear_text)
 
 
     def clear_text(self):
-        print "clear"
+        self.conf_frame.config_data_sync()
         self.close()
-
-    # def uart_update_text(self,data):
-    #     global input_count
-    #     print data
-    #     logging.debug( data )
-    #     cmd = str(data).decode("hex")
-    #     for i in cmd:
-    #         self.r_cmd.r_machine(i)
-    #     show_str = u"R[%d]：%s" % (input_count,self.r_cmd.get_str(1))
-    #     self.log_browser.append( show_str )
-
-    #     if self.r_cmd.cmd_str == '0D':
-    #         if self.r_cmd.op_str == '01':
-    #             # self.log_browser.append(u"<font color=black>打开串口!</font>" )
-    #             self.start_button.setText(u"关闭串口")
-    #         if self.r_cmd.op_str == '00':
-    #             # self.log_browser.append(u"<font color=black>关闭串口!</font>" )
-    #             self.start_button.setText(u"打开串口")
-    #             self.setting_uart(0)
-    #     if self.r_cmd.cmd_str == '0B':
-    #         if self.r_cmd.op_str == '01':
-    #             # self.log_browser.append(u"<font color=black>设置失败</font>")
-    #             logging.debug( u"设置失败" )
-    #         if self.r_cmd.op_str == '00':
-    #             # self.log_browser.append( u"<font color=black>设置成功</font>" )
-    #             logging.debug( u"设置成功" )
-    #     if self.r_cmd.cmd_str == '0A':
-    #         if self.r_cmd.op_str == '00':
-    #             # self.log_browser.append(u"<font color=black>读回UID : [%s]</font>" % self.r_cmd.data)
-    #             logging.debug( u"读回UID : [%s]" % self.r_cmd.data )
-    #         if self.r_cmd.op_str == '01':
-    #             # self.log_browser.append(u"<font color=black>读回DES : %s</font>" % self.r_cmd.data)
-    #             logging.debug( u"读回DES : %s" % self.r_cmd.data )
-    #         if self.r_cmd.op_str == '02':
-    #             # self.log_browser.append(u"<font color=black>读回TAG_DATA : %s</font>" % self.r_cmd.data)
-    #             logging.debug( u"读回TAG_DATA : %s" % self.r_cmd.data )
-    #     self.r_cmd.clear()
 
     @staticmethod
     def get_com_monitor(parent = None):
