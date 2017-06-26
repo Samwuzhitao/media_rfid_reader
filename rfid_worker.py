@@ -13,7 +13,7 @@ import logging
 import json
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
-
+import ConfigParser
 from cmd_rev_decode import *
 from com_monitor    import *
 from led            import *
@@ -30,6 +30,9 @@ class SNConfig():
         self.date    = ""
         self.machine = ""
         self.number  = 0
+        self.mesh    = None
+        self.sn      = None
+        self.factory   = None
 
     def get_sn(self):
         date_year = string.atoi(self.date[0:2],10)-17
@@ -45,6 +48,11 @@ class ComWork(QDialog):
     def __init__(self,ser_list,monitor_dict,parent=None):
         global ser
         super(ComWork, self).__init__(parent)
+
+        self.config = ConfigParser.ConfigParser()
+        self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
+        self.config.readfp(open(self.config_file_name, "rb"))
+
         input_count     = 0
         self.ser_list     = ser_list
         self.monitor_dict = monitor_dict
@@ -163,13 +171,11 @@ class ComWork(QDialog):
 
         self.setLayout(box)
 
-        self.config_data_sync()
+        self.config_data_update()
         self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
-        # self.start_button.clicked.connect(self.band_start)
-        self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
-        # self.com_combo.currentIndexChanged.connect(self.change_uart)
+
 
     def led_status_sync(self):
         index = 0
@@ -185,38 +191,41 @@ class ComWork(QDialog):
                 if index == 4:
                     self.led4.set_color("green")
 
-    def sync_sn_str(self):
-        data_str = ''
-        mesh_str = unicode(self.mesh_type_combo.currentText())
-        if mesh_str == u'0x01:复合滤网\PM2.5滤网':
-            self.sn.mesh = '01'
-        if mesh_str == u'0x02:甲醛滤网':
-            self.sn.mesh = '02'
-        if mesh_str == u'0x03:塑料袋NFC标签':
-            self.sn.mesh = '03'
-        if mesh_str == u'0x04:非法滤网':
-            self.sn.mesh = '04'
-        if mesh_str == u'0xFF:没有标签':
-            self.sn.mesh = 'FF'
+    def sync_sn_update(self):
+        # data_str = ''
+        # mesh_str = unicode(self.mesh_type_combo.currentText())
+        # if mesh_str == u'0x01:复合滤网\PM2.5滤网':
+        #     self.sn.mesh = '01'
+        # if mesh_str == u'0x02:甲醛滤网':
+        #     self.sn.mesh = '02'
+        # if mesh_str == u'0x03:塑料袋NFC标签':
+        #     self.sn.mesh = '03'
+        # if mesh_str == u'0x04:非法滤网':
+        #     self.sn.mesh = '04'
+        # if mesh_str == u'0xFF:没有标签':
+        #     self.sn.mesh = 'FF'
+        # self.mesh_type_combo.setText(self.sn.mesh)
 
-        fac_str = str(self.manufacturer_lineedit.text())
-        fac_str = fac_str.replace('-','')
-        fac_str = fac_str.replace(' ','')
-        self.sn.factory = fac_str
+        self.manufacturer_lineedit.setText(self.sn.factory)
+        self.time_lineedit.setText(self.sn.date)
+        # self.manufacturer_lineedit.setText(self.sn.factory)
 
-        time_str = str(self.time_lineedit.text())
-        time_str = time_str[2:]
-        time_str = time_str.replace('-','')
-        time_str = time_str.replace(' ','')
-        self.sn.date = time_str
+    def config_data_update(self):
+        self.sn.date    = self.config.get('SN', 'date'    )
+        print self.sn.date
+        self.sn.machine = self.config.get('SN', 'machine' )
+        print self.sn.machine
+        self.sn.number  = self.config.get('SN', 'number'  )
+        print self.sn.number
+        self.sn.mesh    = self.config.get('SN', 'mesh'    )
+        print self.sn.mesh
+        self.sn.sn      = self.config.get('SN', 'sn'      )
+        print self.sn.sn
+        self.sn.factory = self.config.get('SN', 'factory' )
+        print self.sn.factory
+        self.sync_sn_update()
 
-        mac_str = str(self.dtq_id_lineedit.text())
-        self.sn.machine = mac_str
 
-    def config_data_sync(self):
-        self.s_cmd.init()
-        self.sync_sn_str()
-        self.des_lineedit.setText(self.sn.get_sn())
 
     def uart_scan(self,dict,combo):
         for i in range(256):

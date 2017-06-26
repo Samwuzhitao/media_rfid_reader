@@ -8,6 +8,7 @@ port4 = COM10
 date = 170626
 machine = 0
 number = 0
-mesh = 01
+mesh = 04
 sn = 06000000
+factory = FF
 

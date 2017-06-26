@@ -30,6 +30,7 @@ class sn_data():
         self.machine   = 0
         self.number    = 0
         self.mesh      = None
+        self.factory   = None
 
     def get_sn(self):
         date_year = string.atoi(self.date[0:2],10)-17
@@ -116,6 +117,7 @@ class sn_ui(QFrame):
         self.config.set('SN', 'machine', self.sn.machine )
         self.config.set('SN', 'number' , self.sn.number  )
         self.config.set('SN', 'mesh'   , self.sn.mesh    )
+        self.config.set('SN', 'factory', self.sn.factory )
         self.config.set('SN', 'sn'     , self.sn.get_sn())
 
         self.config.write(open(self.config_file_name,"w"))
