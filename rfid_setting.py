@@ -48,8 +48,8 @@ class sn_ui(QFrame):
         self.config = config
         self.config_file_name  = file_name
         super(sn_ui, self).__init__(parent)
-        self.dtq_id_label=QLabel(u"产线号  :")
-        self.dtq_id_lineedit = QLineEdit(u"0")
+        self.line_label=QLabel(u"产线号  :")
+        self.line_lineedit = QLineEdit(u"0")
         self.time_label=QLabel(u"生产日期:")
         self.manufacturer_label=QLabel(u"生产厂家:")
         self.manufacturer_lineedit = QLineEdit(u'FF')
@@ -65,8 +65,8 @@ class sn_ui(QFrame):
         g_hbox = QGridLayout()
         g_hbox.addWidget(self.time_label           ,0,0)
         g_hbox.addWidget(self.time_lineedit        ,0,1)
-        g_hbox.addWidget(self.dtq_id_label         ,0,2)
-        g_hbox.addWidget(self.dtq_id_lineedit      ,0,3)
+        g_hbox.addWidget(self.line_label           ,0,2)
+        g_hbox.addWidget(self.line_lineedit        ,0,3)
         g_hbox.addWidget(self.des_label            ,1,0)
         g_hbox.addWidget(self.des_lineedit         ,1,1,1,3)
         g_hbox.addWidget(self.mesh_type_label      ,2,0)
@@ -80,6 +80,26 @@ class sn_ui(QFrame):
         self.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         self.setLayout(g_hbox)
         self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
+
+    def sync_sn_update(self):
+        self.sn.date    = self.config.get('SN', 'date'    )
+        # print self.sn.date
+        self.sn.machine = self.config.get('SN', 'machine' )
+        # print self.sn.machine
+        self.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
+        # print self.sn.number
+        self.sn.mesh    = self.config.get('SN', 'mesh'    )
+        # print self.sn.mesh
+        self.sn.sn      = self.config.get('SN', 'sn'      )
+        # print self.sn.sn
+        self.sn.factory = self.config.get('SN', 'factory' )
+        # print self.sn.factory
+
+        self.manufacturer_lineedit.setText(self.sn.factory)
+        self.line_lineedit.setText(self.sn.machine)
+
+        self.sync_sn_str()
+        self.des_lineedit.setText(self.sn.get_sn())
 
     def sync_sn_str(self):
         data_str = ''
@@ -106,7 +126,7 @@ class sn_ui(QFrame):
         time_str = time_str.replace(' ','')
         self.sn.date = time_str
 
-        mac_str = str(self.dtq_id_lineedit.text())
+        mac_str = str(self.line_lineedit.text())
         self.sn.machine = mac_str
 
     def config_data_sync(self):
@@ -284,9 +304,6 @@ class tag_ui(QFrame):
             self.config.write(open(self.config_file_name,"w"))
 
 
-
-
-
 class ComSetting(QDialog):
     def __init__(self, parent=None):
         global ser
@@ -303,6 +320,7 @@ class ComSetting(QDialog):
 
         self.conf_frame = sn_ui( self.config, self.config_file_name )
         self.com_frame  = tag_ui(self.config, self.config_file_name )
+        self.conf_frame.sync_sn_update()
 
         box = QVBoxLayout()
         box.addWidget(self.com_frame)

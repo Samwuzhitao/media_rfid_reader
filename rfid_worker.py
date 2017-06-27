@@ -76,16 +76,18 @@ class ComWork(QDialog):
         e_layout = QHBoxLayout()
         e_layout.addWidget(self.e_button)
 
-        self.dtq_id_label=QLabel(u"产线号  :")
-        self.dtq_id_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.dtq_id_lineedit = QLineEdit(u"0")
-        self.dtq_id_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
+        self.line_label=QLabel(u"产线号  :")
+        self.line_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
+        self.line_lineedit = QLineEdit(u"0")
+        self.line_lineedit.setReadOnly(True)
+        self.line_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.time_label=QLabel(u"生产日期:")
         self.time_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.manufacturer_label=QLabel(u"生产厂家:")
         self.manufacturer_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.manufacturer_lineedit = QLineEdit(u'FF')
         self.manufacturer_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
+        self.manufacturer_lineedit.setReadOnly(True)
         self.mesh_type_label=QLabel(u"滤网类型:")
         self.mesh_type_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.mesh_type_combo = QComboBox()
@@ -96,15 +98,17 @@ class ComWork(QDialog):
         self.des_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.des_lineedit = QLineEdit(u'FF FF FF FF')
         self.des_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
+        self.des_lineedit.setReadOnly(True)
         self.time_lineedit = QLineEdit( time.strftime(
             '%Y-%m-%d',time.localtime(time.time())))
         self.time_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
+        self.time_lineedit.setReadOnly(True)
 
         g_hbox = QGridLayout()
         g_hbox.addWidget(self.time_label           ,0,0)
         g_hbox.addWidget(self.time_lineedit        ,0,1)
-        g_hbox.addWidget(self.dtq_id_label         ,0,2)
-        g_hbox.addWidget(self.dtq_id_lineedit      ,0,3)
+        g_hbox.addWidget(self.line_label           ,0,2)
+        g_hbox.addWidget(self.line_lineedit        ,0,3)
         g_hbox.addWidget(self.mesh_type_label      ,2,0)
         g_hbox.addWidget(self.mesh_type_combo      ,2,1)
         g_hbox.addWidget(self.manufacturer_label   ,2,2)
@@ -144,10 +148,6 @@ class ComWork(QDialog):
         c_gbox.addWidget(self.com3_lable,1,2)
         c_gbox.addWidget(self.com4_lable,1,3)
 
-        # com_frame = QFrame()
-        # com_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
-        # com_frame.setLayout(c_gbox)
-
         self.sw_label   = QLabel(u"滤网RFID标签授权")
         self.sw_label.setFont(QFont("Roman times",40,QFont.Bold))
         self.sw_label.setAlignment(Qt.AlignCenter)
@@ -176,6 +176,33 @@ class ComWork(QDialog):
 
         self.e_button.clicked.connect(self.clear_text)
 
+    def sync_sn_str(self):
+        data_str = ''
+        mesh_str = unicode(self.mesh_type_combo.currentText())
+        if mesh_str == u'0x01:复合滤网\PM2.5滤网':
+            self.sn.mesh = '01'
+        if mesh_str == u'0x02:甲醛滤网':
+            self.sn.mesh = '02'
+        if mesh_str == u'0x03:塑料袋NFC标签':
+            self.sn.mesh = '03'
+        if mesh_str == u'0x04:非法滤网':
+            self.sn.mesh = '04'
+        if mesh_str == u'0xFF:没有标签':
+            self.sn.mesh = 'FF'
+
+        fac_str = str(self.manufacturer_lineedit.text())
+        fac_str = fac_str.replace('-','')
+        fac_str = fac_str.replace(' ','')
+        self.sn.factory = fac_str
+
+        time_str = str(self.time_lineedit.text())
+        time_str = time_str[2:]
+        time_str = time_str.replace('-','')
+        time_str = time_str.replace(' ','')
+        self.sn.date = time_str
+
+        mac_str = str(self.line_lineedit.text())
+        self.sn.machine = mac_str
 
     def led_status_sync(self):
         index = 0
@@ -191,40 +218,24 @@ class ComWork(QDialog):
                 if index == 4:
                     self.led4.set_color("green")
 
-    def sync_sn_update(self):
-        # data_str = ''
-        # mesh_str = unicode(self.mesh_type_combo.currentText())
-        # if mesh_str == u'0x01:复合滤网\PM2.5滤网':
-        #     self.sn.mesh = '01'
-        # if mesh_str == u'0x02:甲醛滤网':
-        #     self.sn.mesh = '02'
-        # if mesh_str == u'0x03:塑料袋NFC标签':
-        #     self.sn.mesh = '03'
-        # if mesh_str == u'0x04:非法滤网':
-        #     self.sn.mesh = '04'
-        # if mesh_str == u'0xFF:没有标签':
-        #     self.sn.mesh = 'FF'
-        # self.mesh_type_combo.setText(self.sn.mesh)
-
-        self.manufacturer_lineedit.setText(self.sn.factory)
-        self.time_lineedit.setText(self.sn.date)
-        # self.manufacturer_lineedit.setText(self.sn.factory)
-
     def config_data_update(self):
-        self.sn.date    = self.config.get('SN', 'date'    )
-        print self.sn.date
+        # self.sn.date    = self.config.get('SN', 'date'    )
+        # print self.sn.date
         self.sn.machine = self.config.get('SN', 'machine' )
-        print self.sn.machine
-        self.sn.number  = self.config.get('SN', 'number'  )
-        print self.sn.number
+        # print self.sn.machine
+        self.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
+        # print self.sn.number
         self.sn.mesh    = self.config.get('SN', 'mesh'    )
-        print self.sn.mesh
-        self.sn.sn      = self.config.get('SN', 'sn'      )
-        print self.sn.sn
+        # print self.sn.mesh
         self.sn.factory = self.config.get('SN', 'factory' )
-        print self.sn.factory
-        self.sync_sn_update()
+        # print self.sn.factory
+        self.manufacturer_lineedit.setText(self.sn.factory)
+        # self.time_lineedit.setText(self.sn.date)
+        self.line_lineedit.setText(self.sn.machine)
+        self.mesh_type_combo.setCurrentIndex(string.atoi(self.sn.mesh))
 
+        self.sync_sn_str()
+        self.des_lineedit.setText(self.sn.get_sn())
 
 
     def uart_scan(self,dict,combo):
@@ -315,7 +326,7 @@ class ComWork(QDialog):
         global ser
         global input_count
 
-        button = self.sender()
+        button     = self.sender()
         button_str = button.text()
 
         if button_str == u"打开串口":

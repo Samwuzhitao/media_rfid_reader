@@ -80,9 +80,9 @@ class RFIDReader(QWidget):
         print e.key()
         if e.key() == Qt.Key_Escape: # Enter键
             self.close()
-        if e.key() == Qt.Key_1: # Enter键
+        if e.key() == Qt.Key_1:      # 1 键
             self.open_new_session()
-        if e.key() == Qt.Key_2: # Enter键
+        if e.key() == Qt.Key_2:      # 2 键
             self.start_work()
 
     def open_new_session(self):
