@@ -5,10 +5,10 @@ port3 = COM10
 port4 = COM10
 
 [SN]
-date = 170626
-machine = 0
+date = 170627
+machine = 2
 number = 0
-mesh = 04
-sn = 06000000
-factory = FF
+mesh = 02
+sn = 062000000
+factory = 2
 

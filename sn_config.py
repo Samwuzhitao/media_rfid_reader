@@ -135,19 +135,19 @@ class sn_ui(QFrame):
     def config_data_sync(self):
         self.sync_sn_str()
         self.des_lineedit.setText(self.sn.get_sn())
+        if self.config != None:
+            self.config.set('SN', 'date'   , self.sn.date    )
+            self.config.set('SN', 'machine', self.sn.machine )
+            self.config.set('SN', 'number' , self.sn.number  )
+            self.config.set('SN', 'mesh'   , self.sn.mesh    )
+            self.config.set('SN', 'factory', self.sn.factory )
+            self.config.set('SN', 'sn'     , self.sn.get_sn())
 
-        self.config.set('SN', 'date'   , self.sn.date    )
-        self.config.set('SN', 'machine', self.sn.machine )
-        self.config.set('SN', 'number' , self.sn.number  )
-        self.config.set('SN', 'mesh'   , self.sn.mesh    )
-        self.config.set('SN', 'factory', self.sn.factory )
-        self.config.set('SN', 'sn'     , self.sn.get_sn())
-
-        self.config.write(open(self.config_file_name,"w"))
+            self.config.write(open(self.config_file_name,"w"))
 
 if __name__=='__main__':
     app = QApplication(sys.argv)
-    datburner = sn_ui(16,1)
+    datburner = sn_ui(16,0)
     datburner.show()
     app.exec_()
 
