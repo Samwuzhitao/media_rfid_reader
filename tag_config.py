@@ -168,7 +168,7 @@ class tag_ui(QFrame):
         ser_index = self.tag.ser_list_index[port]
         # 端口连接指令
         if str(data) == "5A020D010ECA" or str(data) == "5A020D020DCA" or str(data) == "5A02CC01CFCA":
-
+            print "tag_config:%s %s" % (port,data)
             if str(data) == "5A020D010ECA":
                 self.tag.led_dict[port].set_color("green")
                 if ser_index == 1:

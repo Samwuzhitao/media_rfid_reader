@@ -97,6 +97,7 @@ class RFIDReader(QWidget):
         # if login():
         monitor = ComWork.work_start(self.ser_list,self.monitor_dict)
 
+
 def login():
     dialog = LoginDialog()
     if dialog.exec_():

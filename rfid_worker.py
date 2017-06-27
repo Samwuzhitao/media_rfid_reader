@@ -26,6 +26,56 @@ log_time      = time.strftime( LOGTIMEFORMAT,time.localtime(time.time()))
 log_name      = "log-%s.txt" % log_time
 CONF_FONT_SIZE = 16
 
+class s_cmd_mechine():
+    def __init__(self,led_dict):
+        self.led_dict = led_dict
+        self.status = ['blue','blue','blue','blue']
+        self.connect_cmd = "5A 02 0D 01 0E CA"
+        self.connect_cmd = self.connect_cmd.replace(' ','')
+        self.connect_cmd = self.connect_cmd.decode("hex")
+
+        self.disconnect_cmd = "5A 02 CC 01 CF CA"
+        self.disconnect_cmd = self.disconnect_cmd.replace(' ','')
+        self.disconnect_cmd = self.disconnect_cmd.decode("hex")
+
+        self.read_uid_cmd = "5A 03 55 49 44 5B CA"
+        self.read_uid_cmd = self.read_uid_cmd.replace(' ','')
+        self.read_uid_cmd = self.read_uid_cmd.decode("hex")
+
+        self.set_tag_cmd  = "5A 09 06 0F 42 40 17 06 09 01 01 1A CA"
+        self.set_tag_cmd  = self.set_tag_cmd.replace(' ','')
+        self.set_tag_cmd  = self.set_tag_cmd.decode("hex")
+
+    def get_cmd(self):
+        send_cmd = self.read_uid_cmd
+        if self.status[0] == self.status[1] and \
+           self.status[1] == self.status[2] and\
+           self.status[2] == self.status[3] :
+            if self.status[0] == 'green':
+                i = 0
+                for item in self.led_dict:
+                    i = i + 1
+                    self.led_dict[i].set_color("green")
+            else:
+                i = 0
+                for item in self.led_dict:
+                    i = i + 1
+                    self.led_dict[i].set_color("red")
+        else:
+            i = 0
+            for item in self.led_dict:
+                if self.status[i] == "green":
+                    i = i + 1
+                    self.led_dict[i].set_color('green')
+                else:
+                    i = i + 1
+                    self.led_dict[i].set_color('red')
+
+        return send_cmd
+
+    def set_status(self,index,new_status):
+        self.status[index-1] = new_status
+
 class ComWork(QDialog):
     def __init__(self,ser_list,monitor_dict,parent=None):
         global ser
@@ -35,17 +85,12 @@ class ComWork(QDialog):
         self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
         self.config.readfp(open(self.config_file_name, "rb"))
 
-        input_count     = 0
+        input_count       = 0
         self.ser_list     = ser_list
         self.monitor_dict = monitor_dict
         self.led_dict     = {}
         self.ser        = None
         self.ComMonitor = None
-        self.dtq_id     = ''
-        self.r_cmd      = HexDecode()
-        self.s_cmd      = HexDecode()
-        # self.conf_frame.sn         = SNConfig()
-        self.s_cmd.init()
         self.setWindowTitle(u"滤网RFID生产")
         self.showMaximized()
 
@@ -81,6 +126,7 @@ class ComWork(QDialog):
         self.com4_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.led4  = LED(60)
         self.led_dict[4] = self.led4
+        self.send_cmd_machine = s_cmd_mechine(self.led_dict)
         c_gbox = QGridLayout()
 
         c_gbox.addWidget(self.led1      ,0,0)
@@ -119,7 +165,7 @@ class ComWork(QDialog):
         self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
-        #
+
         for item in self.ser_list:
             if self.monitor_dict.has_key(item):
                 print u"启动串口监听线程! %s " % item
@@ -133,9 +179,8 @@ class ComWork(QDialog):
 
     def uart_auto_send_script(self):
         print "time out"
-        send_cmd = "5A 03 55 49 44 5B CA"
-        send_cmd = str(send_cmd.replace(' ',''))
-        send_cmd = send_cmd.decode("hex")
+
+        send_cmd = self.send_cmd_machine.get_cmd()
 
         for item in self.ser_list:
             if self.monitor_dict.has_key(item):
@@ -145,20 +190,36 @@ class ComWork(QDialog):
         port = str(port)
         data = str(data)
         print port,data
+
+        # 获取当前串口对应的标签号
         i = 0
         for item in self.ser_list:
             i = i + 1
             if item == port:
                 ser_index = i
 
-        # 端口连接指令
-        # print ser_index,data[2:4]
+        # 解析读取UID指令对应的返回
         if data[2:4] == '06': # 读取UID指令
             print data[4:12]
             if data[4:12] == '00000000':
-                self.led_dict[ser_index].set_color("blue")
+                self.send_cmd_machine.set_status(ser_index,"blue")
             else:
-                self.led_dict[ser_index].set_color("green")
+                self.send_cmd_machine.set_status(ser_index,"green")
+
+        # # 解析其他结果的返回
+        # if data[2:4] == '02': # 读取UID指令
+        #     if data[4:8] == '0D01': # 打开串口OK
+        #         self.led_dict[ser_index].set_color("green")
+        #     if data[4:8] == '0D02': # 打开串口失败
+        #         self.led_dict[ser_index].set_color("blue")
+        #     if data[4:8] == 'CC01': # 关闭串口OK
+        #         self.led_dict[ser_index].set_color("blue")
+        #     if data[4:8] == '2D01': # 设置标签TAG OK
+        #         # self.led_dict[ser_index].set_color("green")
+        #         self.send_cmd_machine.set_status(ser_index,2)
+        #     if data[4:8] == '2D04': # 设置标签TAG FAIL
+        #         # self.led_dict[ser_index].set_color("red")
+        #         self.send_cmd_machine.set_status(ser_index,0)
 
     def sync_sn_str(self):
         data_str = ''
@@ -217,7 +278,6 @@ class ComWork(QDialog):
     def clear_text(self):
         print "exit"
         self.close()
-
 
     @staticmethod
     def work_start(ser_list,monitor_dict,parent = None):
