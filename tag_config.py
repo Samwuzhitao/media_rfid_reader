@@ -164,19 +164,42 @@ class tag_ui(QFrame):
                 self.tag.ser_dict[serial_port].write(send_cmd)
 
     def sync_rf_config_data(self,port,data):
-        port = str(port)
+        port      = str(port)
+        ser_index = self.tag.ser_list_index[port]
         # 端口连接指令
         if str(data) == "5A020D010ECA" or str(data) == "5A020D020DCA" or str(data) == "5A02CC01CFCA":
+
             if str(data) == "5A020D010ECA":
                 self.tag.led_dict[port].set_color("green")
+
+                if ser_index == 1:
+                    self.com2_combo.removeItem (ser_index-1)
+                    self.com3_combo.removeItem (ser_index-1)
+                    self.com4_combo.removeItem (ser_index-1)
+                if ser_index == 2:
+                    self.com1_combo.removeItem (ser_index-1)
+                    self.com3_combo.removeItem (ser_index-1)
+                    self.com4_combo.removeItem (ser_index-1)
+                if ser_index == 3:
+                    self.com1_combo.removeItem (ser_index-1)
+                    self.com2_combo.removeItem (ser_index-1)
+                    self.com4_combo.removeItem (ser_index-1)
+                if ser_index == 4:
+                    self.com1_combo.removeItem (ser_index-1)
+                    self.com2_combo.removeItem (ser_index-1)
+                    self.com3_combo.removeItem (ser_index-1)
+
                 if self.config:
                     self.config.set('serial', 'port%d' %  self.tag.ser_list_index[port], port )
+
             if str(data) == "5A020D020DCA":
                 self.tag.led_dict[port].set_color("red")
                 if self.config:
                     self.config.delete('serial', 'port%d' %  self.tag.ser_list_index[port], port )
+
             if str(data) == "5A02CC01CFCA":
                 self.tag.led_dict[port].set_color("blue")
+
             if self.config:
                 self.config.write(open(self.config_file_name,"w"))
 
