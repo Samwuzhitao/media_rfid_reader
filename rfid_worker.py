@@ -58,7 +58,6 @@ class ComWork(QDialog):
         e_layout = QHBoxLayout()
         e_layout.addWidget(self.e_button)
 
-
         self.config = ConfigParser.ConfigParser()
         self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
         self.config.readfp(open(self.config_file_name, "rb"))
@@ -119,13 +118,18 @@ class ComWork(QDialog):
         self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
-        self.conf_frame.mesh_type_combo.currentIndexChanged.connect(self.sync_mesh_data)
+        # self.conf_frame.mesh_type_combo.currentIndexChanged.connect(self.sync_mesh_data)
+        for item in self.ser_list:
+            if self.monitor_dict.has_key(item):
+                print u"启动串口监听线程! %s " % item
+        # self.monitor_dict
 
-    def sync_mesh_data(self):
-        self.mesh_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.mesh)-1)
 
-        self.sync_sn_str()
-        self.des_lineedit.setText(self.conf_frame.sn.get_sn())
+    # def sync_mesh_data(self):
+    #     self.mesh_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.mesh)-1)
+
+    #     self.sync_sn_str()
+    #     self.des_lineedit.setText(self.conf_frame.sn.get_sn())
 
     def sync_sn_str(self):
         data_str = ''

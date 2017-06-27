@@ -171,23 +171,22 @@ class tag_ui(QFrame):
 
             if str(data) == "5A020D010ECA":
                 self.tag.led_dict[port].set_color("green")
-
                 if ser_index == 1:
-                    self.com2_combo.removeItem (ser_index-1)
-                    self.com3_combo.removeItem (ser_index-1)
-                    self.com4_combo.removeItem (ser_index-1)
+                    self.com2_combo.removeItem (self.com2_combo.findText(port))
+                    self.com3_combo.removeItem (self.com3_combo.findText(port))
+                    self.com4_combo.removeItem (self.com4_combo.findText(port))
                 if ser_index == 2:
-                    self.com1_combo.removeItem (ser_index-1)
-                    self.com3_combo.removeItem (ser_index-1)
-                    self.com4_combo.removeItem (ser_index-1)
+                    self.com1_combo.removeItem (self.com1_combo.findText(port))
+                    self.com3_combo.removeItem (self.com3_combo.findText(port))
+                    self.com4_combo.removeItem (self.com4_combo.findText(port))
                 if ser_index == 3:
-                    self.com1_combo.removeItem (ser_index-1)
-                    self.com2_combo.removeItem (ser_index-1)
-                    self.com4_combo.removeItem (ser_index-1)
+                    self.com1_combo.removeItem (self.com1_combo.findText(port))
+                    self.com2_combo.removeItem (self.com2_combo.findText(port))
+                    self.com4_combo.removeItem (self.com4_combo.findText(port))
                 if ser_index == 4:
-                    self.com1_combo.removeItem (ser_index-1)
-                    self.com2_combo.removeItem (ser_index-1)
-                    self.com3_combo.removeItem (ser_index-1)
+                    self.com1_combo.removeItem (self.com1_combo.findText(port))
+                    self.com2_combo.removeItem (self.com2_combo.findText(port))
+                    self.com3_combo.removeItem (self.com3_combo.findText(port))
 
                 if self.config:
                     self.config.set('serial', 'port%d' %  self.tag.ser_list_index[port], port )
@@ -199,6 +198,34 @@ class tag_ui(QFrame):
 
             if str(data) == "5A02CC01CFCA":
                 self.tag.led_dict[port].set_color("blue")
+                if ser_index == 1:
+                    if self.com2_combo.findText(port)  == -1:
+                        self.com2_combo.addItem (port)
+                    if self.com3_combo.findText(port)  == -1:
+                        self.com3_combo.addItem (port)
+                    if self.com4_combo.findText(port)  == -1:
+                        self.com4_combo.addItem (port)
+                if ser_index == 2:
+                    if self.com1_combo.findText(port)  == -1:
+                        self.com1_combo.addItem (port)
+                    if self.com3_combo.findText(port)  == -1:
+                        self.com3_combo.addItem (port)
+                    if self.com4_combo.findText(port)  == -1:
+                        self.com4_combo.addItem (port)
+                if ser_index == 3:
+                    if self.com1_combo.findText(port)  == -1:
+                        self.com1_combo.addItem (port)
+                    if self.com2_combo.findText(port)  == -1:
+                        self.com2_combo.addItem (port)
+                    if self.com4_combo.findText(port)  == -1:
+                        self.com4_combo.addItem (port)
+                if ser_index == 4:
+                    if self.com1_combo.findText(port)  == -1:
+                        self.com1_combo.addItem (port)
+                    if self.com2_combo.findText(port)  == -1:
+                        self.com2_combo.addItem (port)
+                    if self.com3_combo.findText(port)  == -1:
+                        self.com3_combo.addItem (port)
 
             if self.config:
                 self.config.write(open(self.config_file_name,"w"))
