@@ -42,8 +42,9 @@ class ComSetting(QDialog):
         self.config.readfp(open(self.config_file_name, "rb"))
 
         self.conf_frame = sn_ui( None,0,self.config, self.config_file_name )
-        self.com_frame  = tag_ui(self.config, self.config_file_name )
         self.conf_frame.sync_sn_update()
+
+        self.com_frame  = tag_ui(self.config, self.config_file_name )
 
         box = QVBoxLayout()
         box.addWidget(self.com_frame)
@@ -52,7 +53,6 @@ class ComSetting(QDialog):
         self.setLayout(box)
 
         self.clear_button.clicked.connect(self.clear_text)
-
 
     def clear_text(self):
         self.conf_frame.config_data_sync()
@@ -71,6 +71,3 @@ if __name__=='__main__':
     datburner = ComSetting()
     datburner.show()
     app.exec_()
-
-
-

@@ -230,15 +230,5 @@ class ComWork(QDialog):
 
         return (comsetting_dialog.ComMonitor)
 
-if __name__=='__main__':
-    app = QApplication(sys.argv)
-    datburner = ComWork()
-    datburner.show()
-    app.exec_()
-
-    if ser != 0:
-        datburner.find_card_stop()
-        datburner.setting_uart(0)
-
 
 

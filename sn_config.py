@@ -76,18 +76,24 @@ class sn_ui(QFrame):
         g_hbox.addWidget(self.time_lineedit        ,0,1)
         g_hbox.addWidget(self.line_label           ,0,2)
         g_hbox.addWidget(self.line_lineedit        ,0,3)
-        g_hbox.addWidget(self.des_label            ,1,0)
-        g_hbox.addWidget(self.des_lineedit         ,1,1,1,3)
         g_hbox.addWidget(self.mesh_type_label      ,2,0)
         g_hbox.addWidget(self.mesh_type_combo      ,2,1)
         g_hbox.addWidget(self.manufacturer_label   ,2,2)
         g_hbox.addWidget(self.manufacturer_lineedit,2,3)
 
+        d_hbox = QHBoxLayout()
+        d_hbox.addWidget(self.des_label   )
+        d_hbox.addWidget(self.des_lineedit)
+
+        c_hbox = QVBoxLayout()
+        c_hbox.addLayout(g_hbox)
+        c_hbox.addLayout(d_hbox)
+
         self.sync_sn_str()
         self.des_lineedit.setText(self.sn.get_sn())
 
         self.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
-        self.setLayout(g_hbox)
+        self.setLayout(c_hbox)
         self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
 
     def sync_sn_update(self):
