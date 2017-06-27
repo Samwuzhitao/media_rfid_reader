@@ -38,10 +38,7 @@ class ComWork(QDialog):
         input_count     = 0
         self.ser_list     = ser_list
         self.monitor_dict = monitor_dict
-        self.port1_dict = {}
-        self.port2_dict = {}
-        self.port3_dict = {}
-        self.port4_dict = {}
+        self.led_dict     = {}
         self.ser        = None
         self.ComMonitor = None
         self.dtq_id     = ''
@@ -68,18 +65,22 @@ class ComWork(QDialog):
         self.com1_lable.setAlignment(Qt.AlignCenter)
         self.com1_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.led1  = LED(60)
+        self.led_dict[1] = self.led1
         self.com2_lable = QLabel(u"标签2")
         self.com2_lable.setAlignment(Qt.AlignCenter)
         self.com2_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.led2  = LED(60)
+        self.led_dict[2] = self.led2
         self.com3_lable = QLabel(u"标签3")
         self.com3_lable.setAlignment(Qt.AlignCenter)
         self.com3_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.led3  = LED(60)
+        self.led_dict[3] = self.led3
         self.com4_lable = QLabel(u"标签4")
         self.com4_lable.setAlignment(Qt.AlignCenter)
         self.com4_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
         self.led4  = LED(60)
+        self.led_dict[4] = self.led4
         c_gbox = QGridLayout()
 
         c_gbox.addWidget(self.led1      ,0,0)
@@ -118,18 +119,46 @@ class ComWork(QDialog):
         self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
-        # self.conf_frame.mesh_type_combo.currentIndexChanged.connect(self.sync_mesh_data)
+        #
         for item in self.ser_list:
             if self.monitor_dict.has_key(item):
                 print u"启动串口监听线程! %s " % item
-        # self.monitor_dict
+                self.connect( self.monitor_dict[item],
+                        SIGNAL('r_cmd_message(QString,QString)'),
+                        self.uart_cmd_decode)
 
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.uart_auto_send_script)
+        self.timer.start(500)
 
-    # def sync_mesh_data(self):
-    #     self.mesh_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.mesh)-1)
+    def uart_auto_send_script(self):
+        print "time out"
+        send_cmd = "5A 03 55 49 44 5B CA"
+        send_cmd = str(send_cmd.replace(' ',''))
+        send_cmd = send_cmd.decode("hex")
 
-    #     self.sync_sn_str()
-    #     self.des_lineedit.setText(self.conf_frame.sn.get_sn())
+        for item in self.ser_list:
+            if self.monitor_dict.has_key(item):
+                self.monitor_dict[item].com.write(send_cmd)
+
+    def uart_cmd_decode(self,port,data):
+        port = str(port)
+        data = str(data)
+        print port,data
+        i = 0
+        for item in self.ser_list:
+            i = i + 1
+            if item == port:
+                ser_index = i
+
+        # 端口连接指令
+        # print ser_index,data[2:4]
+        if data[2:4] == '06': # 读取UID指令
+            print data[4:12]
+            if data[4:12] == '00000000':
+                self.led_dict[ser_index].set_color("blue")
+            else:
+                self.led_dict[ser_index].set_color("green")
 
     def sync_sn_str(self):
         data_str = ''
@@ -189,43 +218,6 @@ class ComWork(QDialog):
         print "exit"
         self.close()
 
-    def uart_update_text(self,data):
-        global input_count
-        print data
-        logging.debug( data )
-        cmd = str(data).decode("hex")
-        for i in cmd:
-            self.r_cmd.r_machine(i)
-        show_str = u"R[%d]：%s" % (input_count,self.r_cmd.get_str(1))
-        self.log_browser.append( show_str )
-
-        if self.r_cmd.cmd_str == '0D':
-            if self.r_cmd.op_str == '01':
-                # self.log_browser.append(u"<font color=black>打开串口!</font>" )
-                self.start_button.setText(u"关闭串口")
-            if self.r_cmd.op_str == '00':
-                # self.log_browser.append(u"<font color=black>关闭串口!</font>" )
-                self.start_button.setText(u"打开串口")
-                self.setting_uart(0)
-        if self.r_cmd.cmd_str == '0B':
-            if self.r_cmd.op_str == '01':
-                # self.log_browser.append(u"<font color=black>设置失败</font>")
-                logging.debug( u"设置失败" )
-            if self.r_cmd.op_str == '00':
-                # self.log_browser.append( u"<font color=black>设置成功</font>" )
-                logging.debug( u"设置成功" )
-        if self.r_cmd.cmd_str == '0A':
-            if self.r_cmd.op_str == '00':
-                # self.log_browser.append(u"<font color=black>读回UID : [%s]</font>" % self.r_cmd.data)
-                logging.debug( u"读回UID : [%s]" % self.r_cmd.data )
-            if self.r_cmd.op_str == '01':
-                # self.log_browser.append(u"<font color=black>读回DES : %s</font>" % self.r_cmd.data)
-                logging.debug( u"读回DES : %s" % self.r_cmd.data )
-            if self.r_cmd.op_str == '02':
-                # self.log_browser.append(u"<font color=black>读回TAG_DATA : %s</font>" % self.r_cmd.data)
-                logging.debug( u"读回TAG_DATA : %s" % self.r_cmd.data )
-
-        self.r_cmd.clear()
 
     @staticmethod
     def work_start(ser_list,monitor_dict,parent = None):

@@ -230,7 +230,6 @@ class tag_ui(QFrame):
             if self.config:
                 self.config.write(open(self.config_file_name,"w"))
 
-
 if __name__=='__main__':
     app = QApplication(sys.argv)
     datburner = tag_ui(None,None)
