@@ -175,6 +175,13 @@ class ComWork(QDialog):
         self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
+        self.mesh_type_combo.currentIndexChanged.connect(self.sync_mesh_data)
+
+    def sync_mesh_data(self):
+        self.mesh_type_combo.setCurrentIndex(string.atoi(self.sn.mesh)-1)
+
+        self.sync_sn_str()
+        self.des_lineedit.setText(self.sn.get_sn())
 
     def sync_sn_str(self):
         data_str = ''
@@ -232,7 +239,7 @@ class ComWork(QDialog):
         self.manufacturer_lineedit.setText(self.sn.factory)
         # self.time_lineedit.setText(self.sn.date)
         self.line_lineedit.setText(self.sn.machine)
-        self.mesh_type_combo.setCurrentIndex(string.atoi(self.sn.mesh))
+        self.mesh_type_combo.setCurrentIndex(string.atoi(self.sn.mesh)-1)
 
         self.sync_sn_str()
         self.des_lineedit.setText(self.sn.get_sn())
