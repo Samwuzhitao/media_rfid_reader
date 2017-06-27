@@ -17,6 +17,7 @@ import ConfigParser
 from cmd_rev_decode import *
 from com_monitor    import *
 from led            import *
+from sn_config      import *
 
 ser           = 0
 input_count   = 0
@@ -24,25 +25,6 @@ LOGTIMEFORMAT = '%Y%m%d%H'
 log_time      = time.strftime( LOGTIMEFORMAT,time.localtime(time.time()))
 log_name      = "log-%s.txt" % log_time
 CONF_FONT_SIZE = 16
-
-class SNConfig():
-    def __init__(self):
-        self.date    = ""
-        self.machine = ""
-        self.number  = 0
-        self.mesh    = None
-        self.sn      = None
-        self.factory   = None
-
-    def get_sn(self):
-        date_year = string.atoi(self.date[0:2],10)-17
-        date_mon  = string.atoi(self.date[2:4],10)
-        byte1_code = "%02X" % ((date_year << 4) | (date_mon & 0x0F))
-        byte2_1_code = "%01X" % (string.atoi(self.machine,10) << 4)
-        byte2_2_3_4  = "%05X" % self.number
-
-        sn = byte1_code + byte2_1_code + byte2_2_3_4
-        return sn
 
 class ComWork(QDialog):
     def __init__(self,ser_list,monitor_dict,parent=None):
@@ -65,7 +47,7 @@ class ComWork(QDialog):
         self.dtq_id     = ''
         self.r_cmd      = HexDecode()
         self.s_cmd      = HexDecode()
-        self.sn         = SNConfig()
+        # self.conf_frame.sn         = SNConfig()
         self.s_cmd.init()
         self.setWindowTitle(u"滤网RFID生产")
         self.showMaximized()
@@ -76,50 +58,12 @@ class ComWork(QDialog):
         e_layout = QHBoxLayout()
         e_layout.addWidget(self.e_button)
 
-        self.line_label=QLabel(u"产线号  :")
-        self.line_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.line_lineedit = QLineEdit(u"0")
-        self.line_lineedit.setReadOnly(True)
-        self.line_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.time_label=QLabel(u"生产日期:")
-        self.time_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.manufacturer_label=QLabel(u"生产厂家:")
-        self.manufacturer_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.manufacturer_lineedit = QLineEdit(u'FF')
-        self.manufacturer_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.manufacturer_lineedit.setReadOnly(True)
-        self.mesh_type_label=QLabel(u"滤网类型:")
-        self.mesh_type_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.mesh_type_combo = QComboBox()
-        self.mesh_type_combo.addItems([u'0x01:复合滤网\PM2.5滤网',u'0x02:甲醛滤网',
-            u'0x03:塑料袋NFC标签',u'0x04:非法滤网',u'0xFF:没有标签'])
-        self.mesh_type_combo.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.des_label=QLabel(u"序列号  :")
-        self.des_label.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.des_lineedit = QLineEdit(u'FF FF FF FF')
-        self.des_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.des_lineedit.setReadOnly(True)
-        self.time_lineedit = QLineEdit( time.strftime(
-            '%Y-%m-%d',time.localtime(time.time())))
-        self.time_lineedit.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.time_lineedit.setReadOnly(True)
 
-        g_hbox = QGridLayout()
-        g_hbox.addWidget(self.time_label           ,0,0)
-        g_hbox.addWidget(self.time_lineedit        ,0,1)
-        g_hbox.addWidget(self.line_label           ,0,2)
-        g_hbox.addWidget(self.line_lineedit        ,0,3)
-        g_hbox.addWidget(self.mesh_type_label      ,2,0)
-        g_hbox.addWidget(self.mesh_type_combo      ,2,1)
-        g_hbox.addWidget(self.manufacturer_label   ,2,2)
-        g_hbox.addWidget(self.manufacturer_lineedit,2,3)
-        # g_hbox.addItem(QSpacerItem(10,10,QSizePolicy.Expanding,QSizePolicy.Minimum),2,0,2,3)
-        g_hbox.addWidget(self.des_label            ,1,0)
-        g_hbox.addWidget(self.des_lineedit         ,1,1,1,3)
+        self.config = ConfigParser.ConfigParser()
+        self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
+        self.config.readfp(open(self.config_file_name, "rb"))
 
-        conf_frame = QFrame()
-        conf_frame.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
-        conf_frame.setLayout(g_hbox)
+        self.conf_frame = sn_ui( 16,1,self.config, self.config_file_name )
 
         self.com1_lable = QLabel(u"标签1")
         self.com1_lable.setAlignment(Qt.AlignCenter)
@@ -160,7 +104,7 @@ class ComWork(QDialog):
         box.addItem(QSpacerItem(60,60,QSizePolicy.Expanding,QSizePolicy.Minimum))
         box.addWidget(self.sw_label)
         box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
-        box.addWidget(conf_frame)
+        box.addWidget(self.conf_frame)
         box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
         box.addLayout(c_gbox)
         box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
@@ -175,41 +119,41 @@ class ComWork(QDialog):
         self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
-        self.mesh_type_combo.currentIndexChanged.connect(self.sync_mesh_data)
+        self.conf_frame.mesh_type_combo.currentIndexChanged.connect(self.sync_mesh_data)
 
     def sync_mesh_data(self):
-        self.mesh_type_combo.setCurrentIndex(string.atoi(self.sn.mesh)-1)
+        self.mesh_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.mesh)-1)
 
         self.sync_sn_str()
-        self.des_lineedit.setText(self.sn.get_sn())
+        self.des_lineedit.setText(self.conf_frame.sn.get_sn())
 
     def sync_sn_str(self):
         data_str = ''
-        mesh_str = unicode(self.mesh_type_combo.currentText())
+        mesh_str = unicode(self.conf_frame.mesh_type_combo.currentText())
         if mesh_str == u'0x01:复合滤网\PM2.5滤网':
-            self.sn.mesh = '01'
+            self.conf_frame.sn.mesh = '01'
         if mesh_str == u'0x02:甲醛滤网':
-            self.sn.mesh = '02'
+            self.conf_frame.sn.mesh = '02'
         if mesh_str == u'0x03:塑料袋NFC标签':
-            self.sn.mesh = '03'
+            self.conf_frame.sn.mesh = '03'
         if mesh_str == u'0x04:非法滤网':
-            self.sn.mesh = '04'
+            self.conf_frame.sn.mesh = '04'
         if mesh_str == u'0xFF:没有标签':
-            self.sn.mesh = 'FF'
+            self.conf_frame.sn.mesh = 'FF'
 
-        fac_str = str(self.manufacturer_lineedit.text())
+        fac_str = str(self.conf_frame.manufacturer_lineedit.text())
         fac_str = fac_str.replace('-','')
         fac_str = fac_str.replace(' ','')
-        self.sn.factory = fac_str
+        self.conf_frame.sn.factory = fac_str
 
-        time_str = str(self.time_lineedit.text())
+        time_str = str(self.conf_frame.time_lineedit.text())
         time_str = time_str[2:]
         time_str = time_str.replace('-','')
         time_str = time_str.replace(' ','')
-        self.sn.date = time_str
+        self.conf_frame.sn.date = time_str
 
-        mac_str = str(self.line_lineedit.text())
-        self.sn.machine = mac_str
+        mac_str = str(self.conf_frame.line_lineedit.text())
+        self.conf_frame.sn.machine = mac_str
 
     def led_status_sync(self):
         index = 0
@@ -226,36 +170,16 @@ class ComWork(QDialog):
                     self.led4.set_color("green")
 
     def config_data_update(self):
-        # self.sn.date    = self.config.get('SN', 'date'    )
-        # print self.sn.date
-        self.sn.machine = self.config.get('SN', 'machine' )
-        # print self.sn.machine
-        self.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
-        # print self.sn.number
-        self.sn.mesh    = self.config.get('SN', 'mesh'    )
-        # print self.sn.mesh
-        self.sn.factory = self.config.get('SN', 'factory' )
-        # print self.sn.factory
-        self.manufacturer_lineedit.setText(self.sn.factory)
-        # self.time_lineedit.setText(self.sn.date)
-        self.line_lineedit.setText(self.sn.machine)
-        self.mesh_type_combo.setCurrentIndex(string.atoi(self.sn.mesh)-1)
+        self.conf_frame.sn.machine = self.config.get('SN', 'machine' )
+        self.conf_frame.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
+        self.conf_frame.sn.mesh    = self.config.get('SN', 'mesh'    )
+        self.conf_frame.sn.factory = self.config.get('SN', 'factory' )
+        self.conf_frame.manufacturer_lineedit.setText(self.conf_frame.sn.factory)
+        self.conf_frame.line_lineedit.setText(self.conf_frame.sn.machine)
+        self.conf_frame.mesh_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.mesh)-1)
 
         self.sync_sn_str()
-        self.des_lineedit.setText(self.sn.get_sn())
-
-
-    def uart_scan(self,dict,combo):
-        for i in range(256):
-
-            try:
-                s = serial.Serial(i)
-                if dict.has_key(s.portstr) == False:
-                    combo.addItem(s.portstr)
-                    dict[s.portstr] = i
-                s.close()
-            except serial.SerialException:
-                pass
+        self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
 
     def clear_text(self):
         print "exit"
@@ -298,65 +222,6 @@ class ComWork(QDialog):
                 logging.debug( u"读回TAG_DATA : %s" % self.r_cmd.data )
 
         self.r_cmd.clear()
-
-    def change_uart(self):
-        global input_count
-        global ser
-        self.uart_scan(self.ports_dict)
-        if ser != 0:
-            input_count = 0
-            ser.close()
-
-    def setting_uart(self,mode):
-        global ser
-        global input_count
-
-        serial_port = str(self.com_combo.currentText())
-
-        try:
-            ser = serial.Serial( self.ports_dict[serial_port], 115200)
-        except serial.SerialException:
-            pass
-
-        if mode == 1:
-            if ser.isOpen() == True:
-                self.ComMonitor = ComMonitor(ser)
-                input_count = input_count + 1
-                self.ser    = ser
-        else:
-            if input_count > 0:
-
-                input_count = 0
-                ser.close()
-
-    def band_start(self):
-        global ser
-        global input_count
-
-        button     = self.sender()
-        button_str = button.text()
-
-        if button_str == u"打开串口":
-            self.setting_uart(1)
-            if ser.isOpen() == True:
-                input_count = input_count + 1
-                send_cmd  =  "5A 02 0D 01 0E CA"
-                log_str   = u"S[%d]：%s" % (input_count,send_cmd)
-                # self.log_browser.append( log_str )
-                logging.debug( log_str )
-                send_cmd = str(send_cmd.replace(' ',''))
-                print send_cmd
-                send_cmd = send_cmd.decode("hex")
-                ser.write(send_cmd)
-
-        if button_str == u"关闭串口":
-            send_cmd  =  "5A 02 0D 00 0F CA"
-            log_str   = u"S[%d]：%s" % (input_count,send_cmd)
-            # self.log_browser.append( log_str )
-            logging.debug( log_str )
-            send_cmd = str(send_cmd.replace(' ',''))
-            send_cmd = send_cmd.decode("hex")
-            ser.write(send_cmd)
 
     @staticmethod
     def work_start(ser_list,monitor_dict,parent = None):
