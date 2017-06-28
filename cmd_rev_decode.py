@@ -147,11 +147,12 @@ class HexDecode():
         # self.clear()
 
     def r_machine(self,x):
-        char = "%02X" % ord(x)
-        # print "status = %d, char = %s" % (self.status, char )
-        cmd_str = self.cmd_m[self.status](char)
-        # print cmd_str
-        return cmd_str
+        if x:
+            char = "%02X" % ord(x)
+            # print "status = %d, char = %s" % (self.status, char )
+            cmd_str = self.cmd_m[self.status](char)
+            # print cmd_str
+            return cmd_str
 
 if __name__=='__main__':
     cmd_str = "5A 02 0D 01 0E CA"

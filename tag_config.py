@@ -198,6 +198,8 @@ class tag_ui(QFrame):
 
             if str(data) == "5A02CC01CFCA":
                 self.tag.led_dict[port].set_color("blue")
+                self.tag.monitor_dict[port].com.close()
+                self.tag.monitor_dict[port].quit()
                 if ser_index == 1:
                     if self.com2_combo.findText(port)  == -1:
                         self.com2_combo.addItem (port)

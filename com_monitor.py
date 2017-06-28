@@ -4,6 +4,7 @@ Created on Sat Apr 22 10:59:35 2017
 
 @author: Samwu
 """
+import serial
 import string
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
@@ -16,8 +17,6 @@ class ComMonitor(QThread):
         self.working  = True
         self.com      = com
         self.rcmd     = HexDecode()
-        self.scmd     = HexDecode()
-        self.s_count  = 0
 
     def __del__(self):
         self.working=False
@@ -26,9 +25,12 @@ class ComMonitor(QThread):
     def run(self):
         while self.working==True:
             if self.com.isOpen() == True:
-                read_char = self.com.read(1)
-                recv_str  = self.rcmd.r_machine(read_char)
-
+                try:
+                    read_char = self.com.read(1)
+                    recv_str  = self.rcmd.r_machine(read_char)
+                except serial.SerialException:
+                    recv_str = u'{"fun":"Error","description":"serialport lost!"}'
+                    pass
                 if recv_str :
                     self.rcmd.clear()
                     self.emit(SIGNAL('r_cmd_message(QString, QString)'),self.com.portstr,recv_str)

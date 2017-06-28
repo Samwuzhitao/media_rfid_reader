@@ -1,14 +1,14 @@
 [serial]
 port1 = COM10
-port2 = COM10
-port3 = COM10
-port4 = COM10
+port2 = COM35
+port3 = COM38
+port4 = COM39
 
 [SN]
-date = 170627
-machine = 2
+date = 170628
+machine = 3
 number = 0
-mesh = 02
-sn = 062000000
-factory = 2
+mesh = 01
+sn = 063000000
+factory = 1
 

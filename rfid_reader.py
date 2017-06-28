@@ -53,7 +53,7 @@ class RFIDReader(QWidget):
         self.sw_label   = QLabel(u"滤网RFID标签授权")
         self.sw_label.setFont(QFont("Roman times",40,QFont.Bold))
         self.sw_label.setAlignment(Qt.AlignCenter)
-        self.zkxl_label = QLabel(u"版权所有：深圳中科讯联科技有限公司")
+        self.zkxl_label = QLabel(u"版权所有：深圳中科讯联科技股份有限公司")
         self.zkxl_label.setFont(QFont("Roman times",20,QFont.Bold))
         self.zkxl_label.setAlignment(Qt.AlignCenter)
 
@@ -94,8 +94,7 @@ class RFIDReader(QWidget):
                     print u"启动串口监听线程! %s " % item
 
     def start_work(self):
-        # if login():
-        monitor = ComWork.work_start(self.ser_list,self.monitor_dict)
+        ComWork.work_start(self.ser_list,self.monitor_dict)
 
 
 def login():
