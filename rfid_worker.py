@@ -38,6 +38,7 @@ class s_cmd_mechine(QObject):
         super(s_cmd_mechine, self).__init__(parent)
         self.led_dict    = led_dict
         self.cmd_status  = [0,0,0,0]
+        self.send_cmd_count = 0
         self.status      = ['blue','blue','blue','blue']
         self.connect_cmd = "5A 02 0D 01 0E CA"
         self.connect_cmd = self.connect_cmd.replace(' ','')
@@ -69,6 +70,12 @@ class s_cmd_mechine(QObject):
          self.cmd_status[2]  = 0
          self.cmd_status[3]  = 0
 
+    def get_max_cmd_status(self):
+        max_cmd_status = 0
+        for item in self.cmd_status:
+            if max_cmd_status < item:
+                max_cmd_status = item
+        return max_cmd_status
 
     def check_cmd_status(self):
         if self.cmd_status[0] == self.cmd_status[1] and \
@@ -91,28 +98,17 @@ class s_cmd_mechine(QObject):
 
         print "check_cmd_status = ",self.check_cmd_status()
 
-        if self.check_cmd_status() == True:
-            if self.cmd_status[0] == 1:
-                send_cmd_name = "set_tag"
-            if self.cmd_status[0] == 2:
-                send_cmd_name = "clear_tag"
-            if self.cmd_status[0] == 3:
-                self.clear_cmd_status()
-                send_cmd_name = "read_uid"
+        sort_list = self.cmd_status
+        sort_list.sort()
+        if sort_list[0] == 1:
+            send_cmd_name = "set_tag"
+
+        print "cmd_status = %d cmd = %s" % (self.cmd_status[0], send_cmd_name)
+        logging.debug( "cmd_status = %d cmd = %s" % (self.cmd_status[0], send_cmd_name))
+        if send_cmd_name:
+            return self.cmd_dict[send_cmd_name]
         else:
-            sort_list = self.cmd_status.sort()
-            if sort_list[0] == 1:
-                send_cmd_name = "set_tag"
-            if sort_list[0] == 2:
-                send_cmd_name = "clear_tag"
-            if sort_list[0] == 3:
-                self.clear_cmd_status()
-                send_cmd_name = "read_uid"
-
-            print "cmd_status = %d cmd = %s" % (self.cmd_status[0], send_cmd_name)
-            logging.debug( "cmd_status = %d cmd = %s" % (self.cmd_status[0], send_cmd_name))
-
-        return self.cmd_dict[send_cmd_name]
+            return None
 
     def set_status(self,index,new_status):
         self.status[index-1] = new_status
@@ -223,40 +219,48 @@ class ComWork(QDialog):
     def update_result(self,status1,status2,status3,status4):
         status = [status1,status2,status3 ,status4]
         # print status
-        if status[0] == status[1] and status[1] == status[2] and status[2] == status[3] :
-            if status[0] == 'green':
-                self.conf_frame.sn.number = self.conf_frame.sn.number + 1
-                # logging.debug( "cmd_status = %d cmd：" % (self.cmd_status[0],send_cmd) )
-                self.sync_sn_str()
-                self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
-                i = 0
-                for item in self.led_dict:
-                    i = i + 1
-                    self.led_dict[i].set_color("green")
-            else:
-                i = 0
-                for item in self.led_dict:
-                    i = i + 1
-                    self.led_dict[i].set_color("red")
-        else:
-            i = 0
-            for item in self.led_dict:
-                if status[i] == "green":
-                    i = i + 1
-                    self.led_dict[i].set_color('green')
+        i = 0
+        if self.send_cmd_machine.get_max_cmd_status() == 2:
+            if self.send_cmd_machine.check_cmd_status() == True:
+                if self.send_cmd_machine.cmd_status[0] == 2:
+                    self.conf_frame.sn.number = self.conf_frame.sn.number + 1
+                    # logging.debug( "cmd_status = %d cmd：" % (self.cmd_status[0],send_cmd) )
+                    self.sync_sn_str()
+                    self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
+                    for item in self.led_dict:
+                        i = i + 1
+                        self.led_dict[i].set_color("green")
+                        self.send_cmd_machine.clear_cmd_status()
                 else:
-                    i = i + 1
-                    self.led_dict[i].set_color('red')
+                    for item in self.led_dict:
+                        if status[i] == "green":
+                            i = i + 1
+                            self.led_dict[i].set_color('green')
+                        else:
+                            i = i + 1
+                            self.led_dict[i].set_color('red')
+        else:
+            for item in self.led_dict:
+                i = i + 1
+                self.led_dict[i].set_color("red")
 
     def uart_auto_send_script(self):
         print "time out"
         send_cmd = self.send_cmd_machine.get_cmd()
+        if send_cmd == self.send_cmd_machine.set_tag_cmd:
+            send_cmd =  self.conf_frame.sn.get_tag_cmd()
+            print "TAG_CMD = " + send_cmd
+            send_cmd = send_cmd.decode("hex")
 
         if send_cmd:
+            i = 0
             for item in self.ser_list:
+                i = i + 1
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
-                        self.monitor_dict[item].com.write(send_cmd)
+                        if self.send_cmd_machine.cmd_status[i-1] != 2:
+                            self.monitor_dict[item].com.write(send_cmd)
+
 
     def uart_cmd_decode(self,port,data):
         port = str(port)
@@ -280,6 +284,15 @@ class ComWork(QDialog):
                 self.send_cmd_machine.set_status(ser_index,"green")
                 self.send_cmd_machine.cmd_status[ser_index-1] = 1
 
+        if data[2:4] == '09':
+            print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:22])
+            if data[4:22] == self.conf_frame.sn.get_tag():
+                print "验证标签TAG OK"
+                self.send_cmd_machine.cmd_status[ser_index-1] = 2
+            else:
+                print "验证标签TAG FAIL"
+                self.send_cmd_machine.cmd_status[ser_index-1] = 0
+
         # # 解析其他结果的返回
         if data[2:4] == '02':
             if data[4:8] == '0D01': # 打开串口OK
@@ -291,16 +304,11 @@ class ComWork(QDialog):
             if data[4:8] == '2D01': # 设置标签TAG OK
                 self.led_dict[ser_index].set_color("green")
                 self.send_cmd_machine.cmd_status[ser_index-1] = 2
+                print "设置标签TAG OK"
             if data[4:8] == '2D04': # 设置标签TAG FAIL
                 self.led_dict[ser_index].set_color("red")
                 self.send_cmd_machine.cmd_status[ser_index-1] = 1
-            if data[4:8] == '3D01': # CLEAR标签TAG OK
-                self.led_dict[ser_index].set_color("red")
-                self.send_cmd_machine.cmd_status[ser_index-1] = 3
-            if data[4:8] == '3D05': # CLEAR标签TAG FAIL
-                self.led_dict[ser_index].set_color("red")
-                self.send_cmd_machine.cmd_status[ser_index-1] = 2
-
+                print "设置标签TAG FAIL"
 
     def sync_sn_str(self):
         data_str = ''

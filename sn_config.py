@@ -33,6 +33,27 @@ class sn_data():
         sn = byte1_code + byte2_1_code + byte2_2_3_4
         return sn
 
+    def get_tag(self):
+        sn = self.get_sn()
+        tag = sn + self.date + self.factory + self.mesh
+
+        return tag
+
+    def get_tag_cmd(self):
+        crc_data = '09' + self.get_tag()
+        crc_len = len( crc_data )
+        crc      = 0
+        i = 0
+        for item in crc_data:
+            if i <= crc_len-2:
+                crc  = crc ^ string.atoi(crc_data[i:i+2], 16)
+                # print "c_crc = %02X crc_in = %s" % (self.crc,crc_data[i:i+2])
+            i = i + 2
+        crc_str = "%02X" % crc
+        tag_cmd = '5A' + crc_data + crc_str + 'CA'
+
+        return tag_cmd
+
 class sn_ui(QFrame):
     def __init__(self, font_size, read_mode, config=None, file_name=None, parent=None):
         self.sn = sn_data()
