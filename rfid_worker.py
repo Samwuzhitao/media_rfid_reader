@@ -283,9 +283,9 @@ class ComWork(QDialog):
                 self.send_cmd_machine.set_status(ser_index,"green")
                 self.send_cmd_machine.cmd_status[ser_index-1] = 1
 
-        if data[2:4] == '09':
-            print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:22])
-            if data[4:22] == self.conf_frame.sn.get_tag():
+        if data[2:4] == '0D':
+            print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:30])
+            if data[4:30] == self.conf_frame.sn.get_tag():
                 print "验证标签TAG OK"
                 self.send_cmd_machine.cmd_status[ser_index-1] = 2
             else:
