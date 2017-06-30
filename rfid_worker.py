@@ -211,6 +211,7 @@ class ComWork(QDialog):
                 self.connect( self.monitor_dict[item],
                         SIGNAL('r_cmd_message(QString,QString)'),
                         self.uart_cmd_decode)
+                self.monitor_dict[item].start()
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
@@ -245,21 +246,19 @@ class ComWork(QDialog):
                 self.led_dict[i].set_color("red")
 
     def uart_auto_send_script(self):
-        print "time out"
         send_cmd = self.send_cmd_machine.get_cmd()
         if send_cmd == self.send_cmd_machine.set_tag_cmd:
             send_cmd =  self.conf_frame.sn.get_tag_cmd()
             print "TAG_CMD = " + send_cmd
             send_cmd = send_cmd.decode("hex")
-
         if send_cmd:
             i = 0
             for item in self.ser_list:
-                i = i + 1
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
-                        if self.send_cmd_machine.cmd_status[i-1] != 2:
+                        if self.send_cmd_machine.cmd_status[i] != 2:
                             self.monitor_dict[item].com.write(send_cmd)
+                i = i + 1
 
 
     def uart_cmd_decode(self,port,data):
