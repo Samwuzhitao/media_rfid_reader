@@ -103,6 +103,7 @@ class tag_ui(QFrame):
                                 self.tag.led_list[tag_index].set_color("green")
                                 self.tag.monitor_dict[item] = ComMonitor(ser)
                                 self.tag.ser_list.append(item)
+                                print  self.tag.ser_list
                             if cmd_str[4:8] == '0D02': # 打开串口失败
                                 self.tag.led_list[tag_index].set_color("blue")
                             return

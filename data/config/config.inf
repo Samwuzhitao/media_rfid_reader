@@ -1,8 +1,8 @@
 [serial]
-port1 = COM10
-port2 = COM35
-port3 = COM38
-port4 = COM39
+port1 = COM39
+port2 = COM40
+port3 = COM41
+port4 = COM42
 
 [SN]
 date = 170701

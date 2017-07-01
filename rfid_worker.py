@@ -122,17 +122,17 @@ class s_cmd_mechine(QObject):
             return None
 
 class ComWork(QDialog):
-    def __init__(self,ser_list,monitor_dict,parent=None):
+    def __init__(self,parent=None):
         global ser
-        super(ComWork, self).__init__(parent)
+        super(ComWork,self).__init__(parent)
 
         self.config = ConfigParser.ConfigParser()
         self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
         self.config.readfp(open(self.config_file_name, "rb"))
 
         input_count       = 0
-        self.ser_list     = ser_list
-        self.monitor_dict = monitor_dict
+        self.ser_list     = []
+        self.monitor_dict = {}
         self.led_dict     = {}
         self.ser        = None
         self.ComMonitor = None
@@ -207,19 +207,13 @@ class ComWork(QDialog):
         self.setLayout(box)
 
         self.config_data_update()
-        self.led_status_sync()
+        # self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
 
         self.connect(self.send_cmd_machine,SIGNAL('sn_update(int,int,int,int)'),self.update_result )
 
-        for item in self.ser_list:
-            if self.monitor_dict.has_key(item):
-                print u"启动串口监听线程! %s " % item
-                self.connect( self.monitor_dict[item],
-                        SIGNAL('r_cmd_message(QString,QString)'),
-                        self.uart_cmd_decode)
-                self.monitor_dict[item].start()
+
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
@@ -377,6 +371,26 @@ class ComWork(QDialog):
                     self.led4.set_color("green")
 
     def config_data_update(self):
+        port1 = self.config.get('serial', 'port1' )
+        port2 = self.config.get('serial', 'port2' )
+        port3 = self.config.get('serial', 'port3' )
+        port4 = self.config.get('serial', 'port4' )
+        self.ser_list.append(port1)
+        self.ser_list.append(port2)
+        self.ser_list.append(port3)
+        self.ser_list.append(port4)
+
+        print self.ser_list
+
+        for item in self.ser_list:
+            ser = serial.Serial( item, 115200, timeout = 0.5)
+            self.monitor_dict[item] = ComMonitor(ser)
+            print u"启动串口监听线程! %s " % item
+            self.connect( self.monitor_dict[item],
+                    SIGNAL('r_cmd_message(QString,QString)'),
+                    self.uart_cmd_decode)
+            self.monitor_dict[item].start()
+
         self.conf_frame.sn.machine = self.config.get('SN', 'machine' )
         self.conf_frame.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
         self.conf_frame.sn.mesh    = self.config.get('SN', 'mesh'    )
@@ -393,10 +407,11 @@ class ComWork(QDialog):
         self.close()
 
     @staticmethod
-    def work_start(ser_list,monitor_dict,parent = None):
-        comsetting_dialog = ComWork(ser_list,monitor_dict,parent)
+    def work_start(parent = None):
+        comsetting_dialog = ComWork(parent)
         result = comsetting_dialog.exec_()
-        for item in ser_list:
+
+        for item in comsetting_dialog.ser_list:
             comsetting_dialog.monitor_dict[item].com.close()
             comsetting_dialog.monitor_dict[item].quit()
 

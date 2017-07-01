@@ -89,9 +89,17 @@ class ComSetting(QDialog):
     def get_com_monitor(parent = None):
         comsetting_dialog = ComSetting(parent)
         result = comsetting_dialog.exec_()
+        if comsetting_dialog.config != None:
+            comsetting_dialog.config.set('serial', 'port1', comsetting_dialog.tag_frame.tag.ser_list[0])
+            comsetting_dialog.config.set('serial', 'port2', comsetting_dialog.tag_frame.tag.ser_list[1])
+            comsetting_dialog.config.set('serial', 'port3', comsetting_dialog.tag_frame.tag.ser_list[2])
+            comsetting_dialog.config.set('serial', 'port4', comsetting_dialog.tag_frame.tag.ser_list[3])
 
-        return (comsetting_dialog.tag_frame.tag.ser_list,
-                comsetting_dialog.tag_frame.tag.monitor_dict)
+            comsetting_dialog.config.write(open(comsetting_dialog.config_file_name,"w"))
+
+        for item in comsetting_dialog.tag_frame.tag.ser_list:
+            comsetting_dialog.tag_frame.tag.monitor_dict[item].com.close()
+            comsetting_dialog.tag_frame.tag.monitor_dict[item].quit()
 
 if __name__=='__main__':
     app = QApplication(sys.argv)

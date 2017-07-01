@@ -87,14 +87,14 @@ class RFIDReader(QWidget):
 
     def open_new_session(self):
         if login():
-            self.ser_list,self.monitor_dict = ComSetting.get_com_monitor()
-            if self.monitor_dict :
-                # 创建监听线程
-                for item in self.ser_list:
-                    print u"启动串口监听线程! %s " % item
+            ComSetting.get_com_monitor()
+            # if self.monitor_dict :
+            #     # 创建监听线程
+            #     for item in self.ser_list:
+            #         print u"启动串口监听线程! %s " % item
 
     def start_work(self):
-        ComWork.work_start(self.ser_list,self.monitor_dict)
+        ComWork.work_start()
 
 
 def login():
