@@ -30,6 +30,7 @@ class ComMonitor(QThread):
                     recv_str  = self.rcmd.r_machine(read_char)
                 except serial.SerialException:
                     recv_str = u'{"fun":"Error","description":"serialport lost!"}'
+                    self.working = False
                     pass
                 if recv_str :
                     self.rcmd.clear()

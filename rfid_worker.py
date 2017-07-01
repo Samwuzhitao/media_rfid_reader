@@ -36,8 +36,8 @@ logging.basicConfig ( # 配置日志输出的方式及格式
 class s_cmd_mechine(QObject):
     def __init__(self,led_dict,parent=None):
         super(s_cmd_mechine, self).__init__(parent)
-        self.led_dict    = led_dict
-        self.cmd_status  = [0,0,0,0]
+        self.led_dict       = led_dict
+        self.cmd_status     = [0,0,0,0]
         self.send_cmd_count = 0
         self.status      = ['blue','blue','blue','blue']
         self.connect_cmd = "5A 02 0D 01 0E CA"
@@ -70,41 +70,40 @@ class s_cmd_mechine(QObject):
          self.cmd_status[2]  = 0
          self.cmd_status[3]  = 0
 
-    def get_max_cmd_status(self):
-        max_cmd_status = 0
+    def get_cmd_status(self):
+        max_cmd_status = self.cmd_status[0]
+        min_cmd_status = self.cmd_status[0]
         for item in self.cmd_status:
             if max_cmd_status < item:
                 max_cmd_status = item
-        return max_cmd_status
-
-    def check_cmd_status(self):
-        if self.cmd_status[0] == self.cmd_status[1] and \
-           self.cmd_status[1] == self.cmd_status[2] and \
-           self.cmd_status[2] == self.cmd_status[3]:
-           return True
-        else:
-            return False
+            if min_cmd_status > item:
+                min_cmd_status = item
+        return max_cmd_status,min_cmd_status
 
     def get_cmd(self):
-        self.emit(SIGNAL('sn_update(QString,QString,QString,QString)'),
-            self.status[0],self.status[1],self.status[2],self.status[3])
+        self.emit(SIGNAL('sn_update(int,int,int,int)'),
+            self.cmd_status[0],self.cmd_status[1],self.cmd_status[2],self.cmd_status[3])
         send_cmd_name = None
         # 指令改变，只要有一个没有寻到卡片就返回寻卡指令
-        print self.cmd_status
-        for item in self.cmd_status:
-            if item == 0:
-                send_cmd_name = "read_uid"
-                return self.cmd_dict[send_cmd_name]
 
-        print "check_cmd_status = ",self.check_cmd_status()
+        max_status,min_status = self.get_cmd_status()
+        # print max_status,min_status
 
-        sort_list = self.cmd_status
-        sort_list.sort()
-        if sort_list[0] == 1:
+        if max_status == 2 and min_status == 2:
+            self.clear_cmd_status()
+            # print "clear_cmd_status"
+            return None
+
+        if min_status == 1:
             send_cmd_name = "set_tag"
+            # print send_cmd_name
+            return self.cmd_dict[send_cmd_name]
 
-        print "cmd_status = %d cmd = %s" % (self.cmd_status[0], send_cmd_name)
-        logging.debug( "cmd_status = %d cmd = %s" % (self.cmd_status[0], send_cmd_name))
+        if min_status == 0:
+            send_cmd_name = "read_uid"
+            # print send_cmd_name
+            return self.cmd_dict[send_cmd_name]
+
         if send_cmd_name:
             return self.cmd_dict[send_cmd_name]
         else:
@@ -203,7 +202,7 @@ class ComWork(QDialog):
 
         self.e_button.clicked.connect(self.clear_text)
 
-        self.connect(self.send_cmd_machine,SIGNAL('sn_update(QString,QString,QString,QString)'),self.update_result )
+        self.connect(self.send_cmd_machine,SIGNAL('sn_update(int,int,int,int)'),self.update_result )
 
         for item in self.ser_list:
             if self.monitor_dict.has_key(item):
@@ -219,52 +218,52 @@ class ComWork(QDialog):
 
     def update_result(self,status1,status2,status3,status4):
         status = [status1,status2,status3 ,status4]
-        # print status
+
         i = 0
-        if self.send_cmd_machine.get_max_cmd_status() == 2:
-            if self.send_cmd_machine.check_cmd_status() == True:
-                if self.send_cmd_machine.cmd_status[0] == 2:
-                    self.conf_frame.sn.number = self.conf_frame.sn.number + 1
-                    # logging.debug( "cmd_status = %d cmd：" % (self.cmd_status[0],send_cmd) )
-                    self.sync_sn_str()
-                    self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
-                    for item in self.led_dict:
-                        i = i + 1
-                        self.led_dict[i].set_color("green")
-                        self.send_cmd_machine.clear_cmd_status()
-                else:
-                    for item in self.led_dict:
-                        if status[i] == "green":
-                            i = i + 1
-                            self.led_dict[i].set_color('green')
-                        else:
-                            i = i + 1
-                            self.led_dict[i].set_color('red')
-        else:
+        max_status,min_status = self.send_cmd_machine.get_cmd_status()
+
+        if max_status == 2 and min_status == 2:
             for item in self.led_dict:
                 i = i + 1
-                self.led_dict[i].set_color("red")
+                self.led_dict[i].set_color("green")
+            self.conf_frame.sn.number = self.conf_frame.sn.number + 1
+            self.sync_sn_str()
+            self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
+        else:
+            i = 0
+            for item in status:
+                if status[i] == 2:
+                    self.led_dict[i+1].set_color('green')
+                if status[i] == 1:
+                    self.led_dict[i+1].set_color('red')
+                if status[i] == 0:
+                    self.led_dict[i+1].set_color('blue')
+                i = i + 1
 
     def uart_auto_send_script(self):
         send_cmd = self.send_cmd_machine.get_cmd()
+
         if send_cmd == self.send_cmd_machine.set_tag_cmd:
             send_cmd =  self.conf_frame.sn.get_tag_cmd()
             print "TAG_CMD = " + send_cmd
             send_cmd = send_cmd.decode("hex")
-        if send_cmd:
-            i = 0
-            for item in self.ser_list:
-                if self.monitor_dict.has_key(item):
-                    if self.monitor_dict[item].com.isOpen() == True:
-                        if self.send_cmd_machine.cmd_status[i] != 2:
-                            self.monitor_dict[item].com.write(send_cmd)
-                i = i + 1
 
+        max_status,min_status = self.send_cmd_machine.get_cmd_status()
+        print self.send_cmd_machine.cmd_status
+
+        i = 0
+        for item in self.ser_list:
+            if self.monitor_dict.has_key(item):
+                if self.monitor_dict[item].com.isOpen() == True:
+                    if self.send_cmd_machine.cmd_status[i] == min_status:
+                        self.monitor_dict[item].com.write(send_cmd)
+                        # print item,self.send_cmd_machine.cmd_status[i]
+            i = i + 1
 
     def uart_cmd_decode(self,port,data):
         port = str(port)
         data = str(data)
-        print port,data
+        print port,data,
 
         # 获取当前串口对应的标签号
         i = 0
@@ -275,37 +274,35 @@ class ComWork(QDialog):
 
         # 解析读取UID指令对应的返回
         if data[2:4] == '06': # 读取UID指令
-            print data[4:12]
+            # print data[4:12]
             if data[4:12] == '00000000':
-                self.send_cmd_machine.set_status(ser_index,"blue")
                 self.send_cmd_machine.cmd_status[ser_index-1] = 0
+                print u"读取UID FAIL"
             else:
-                self.send_cmd_machine.set_status(ser_index,"green")
                 self.send_cmd_machine.cmd_status[ser_index-1] = 1
+                print u"读取UID OK"
 
         if data[2:4] == '0D':
-            print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:30])
+            # print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:30])
             if data[4:30] == self.conf_frame.sn.get_tag():
                 print "验证标签TAG OK"
-                self.send_cmd_machine.cmd_status[ser_index-1] = 2
+                self.send_cmd_machine.cmd_status[ser_index-1] = 0
             else:
                 print "验证标签TAG FAIL"
                 self.send_cmd_machine.cmd_status[ser_index-1] = 0
 
-        # # 解析其他结果的返回
+        # 解析其他结果的返回
         if data[2:4] == '02':
             if data[4:8] == '0D01': # 打开串口OK
-                self.led_dict[ser_index].set_color("green")
+                print u"打开串口OK"
             if data[4:8] == '0D02': # 打开串口失败
-                self.led_dict[ser_index].set_color("blue")
+                print u"打开串口失败"
             if data[4:8] == 'CC01': # 关闭串口OK
-                self.led_dict[ser_index].set_color("blue")
+                print u"关闭串口OK"
             if data[4:8] == '2D01': # 设置标签TAG OK
-                self.led_dict[ser_index].set_color("green")
                 self.send_cmd_machine.cmd_status[ser_index-1] = 2
                 print "设置标签TAG OK"
             if data[4:8] == '2D04': # 设置标签TAG FAIL
-                self.led_dict[ser_index].set_color("red")
                 self.send_cmd_machine.cmd_status[ser_index-1] = 1
                 print "设置标签TAG FAIL"
 
