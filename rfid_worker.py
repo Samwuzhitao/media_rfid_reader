@@ -38,6 +38,7 @@ class s_cmd_mechine(QObject):
         super(s_cmd_mechine, self).__init__(parent)
         self.led_dict       = led_dict
         self.cmd_status     = [0,0,0,0]
+        self.tag_uid        = ['','','','']
         self.send_cmd_count = 0
         self.status      = ['blue','blue','blue','blue']
         self.connect_cmd = "5A 02 0D 01 0E CA"
@@ -91,17 +92,21 @@ class s_cmd_mechine(QObject):
 
         if max_status == 2 and min_status == 2:
             self.clear_cmd_status()
-            # print "clear_cmd_status"
             return None
+        if max_status == 3 and min_status == 1:
+            send_cmd_name = "read_uid"
+            return self.cmd_dict[send_cmd_name]
 
         if min_status == 1:
             send_cmd_name = "set_tag"
-            # print send_cmd_name
             return self.cmd_dict[send_cmd_name]
 
         if min_status == 0:
             send_cmd_name = "read_uid"
-            # print send_cmd_name
+            return self.cmd_dict[send_cmd_name]
+
+        if min_status == 2 or min_status == 3:
+            send_cmd_name = "read_uid"
             return self.cmd_dict[send_cmd_name]
 
         if send_cmd_name:
@@ -255,8 +260,12 @@ class ComWork(QDialog):
         for item in self.ser_list:
             if self.monitor_dict.has_key(item):
                 if self.monitor_dict[item].com.isOpen() == True:
-                    if self.send_cmd_machine.cmd_status[i] == min_status:
-                        self.monitor_dict[item].com.write(send_cmd)
+                    if send_cmd:
+                        if max_status != 3:
+                            if self.send_cmd_machine.cmd_status[i] == min_status:
+                                self.monitor_dict[item].com.write(send_cmd)
+                        else:
+                            self.monitor_dict[item].com.write(send_cmd)
                         # print item,self.send_cmd_machine.cmd_status[i]
             i = i + 1
 
@@ -277,19 +286,28 @@ class ComWork(QDialog):
             # print data[4:12]
             if data[4:12] == '00000000':
                 self.send_cmd_machine.cmd_status[ser_index-1] = 0
-                print u"读取UID FAIL"
+                if self.send_cmd_machine.cmd_status[ser_index-1] == 0:
+                    print u"读取UID FAIL"
+                else:
+                    print u"匹配UID FIAL！标签移开"
             else:
-                self.send_cmd_machine.cmd_status[ser_index-1] = 1
-                print u"读取UID OK"
+                if self.send_cmd_machine.cmd_status[ser_index-1] == 0:
+                    self.send_cmd_machine.cmd_status[ser_index-1] = 1
+                    self.send_cmd_machine.tag_uid[ser_index-1] = data[4:12]
+                    print u"读取UID OK，记录UID！"
+                else:
+                    if self.send_cmd_machine.tag_uid[ser_index-1] == data[4:12]:
+                        self.send_cmd_machine.cmd_status[ser_index-1] = 3
+                    print u"匹配UID OK！标签未移开"
 
         if data[2:4] == '0D':
             # print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:30])
             if data[4:30] == self.conf_frame.sn.get_tag():
                 print "验证标签TAG OK"
-                self.send_cmd_machine.cmd_status[ser_index-1] = 0
+                self.send_cmd_machine.cmd_status[ser_index-1] = 3
             else:
                 print "验证标签TAG FAIL"
-                self.send_cmd_machine.cmd_status[ser_index-1] = 0
+                self.send_cmd_machine.cmd_status[ser_index-1] = 3
 
         # 解析其他结果的返回
         if data[2:4] == '02':

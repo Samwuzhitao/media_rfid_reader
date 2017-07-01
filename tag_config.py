@@ -20,7 +20,6 @@ import ConfigParser
 class tag_data():
     def __init__(self):
         self.ser_list     = []
-        # self.ports_dict   = {}
         self.monitor_dict = {}
         self.led_list     = []
 
