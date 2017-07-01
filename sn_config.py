@@ -18,9 +18,9 @@ import ConfigParser
 class sn_data():
     def __init__(self):
         self.date      = ""
-        self.machine   = 0
+        self.machine   = "01"
         self.number    = 0
-        self.mesh      = None
+        self.mesh      = ""
         self.factory   = ""
         self.ccm       = ""
 
@@ -135,14 +135,15 @@ class sn_ui(QFrame):
     def sync_sn_update(self):
         self.sn.date    = self.config.get('SN', 'date'    )
         self.sn.machine = self.config.get('SN', 'machine' )
-        self.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
-        self.sn.mesh    = self.config.get('SN', 'mesh'    )
-        self.sn.sn      = self.config.get('SN', 'sn'      )
-        self.sn.factory = self.config.get('SN', 'factory' )
-        self.sn.ccm     = self.config.get('SN', 'ccm' )
+        if self.config.get('SN', 'number'  ) != '':
+            self.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
+            self.sn.mesh    = self.config.get('SN', 'mesh'    )
+            self.sn.sn      = self.config.get('SN', 'sn'      )
+            self.sn.factory = self.config.get('SN', 'factory' )
+            self.sn.ccm     = self.config.get('SN', 'ccm' )
 
-        self.manufacturer_lineedit.setText(self.sn.factory)
-        self.line_lineedit.setText(self.sn.machine)
+            self.manufacturer_lineedit.setText(self.sn.factory)
+            self.line_lineedit.setText(self.sn.machine)
 
         self.sync_sn_str()
         self.des_lineedit.setText(self.sn.get_sn())
@@ -168,7 +169,8 @@ class sn_ui(QFrame):
             self.sn.ccm = '02'
 
         fac_str = str(self.manufacturer_lineedit.text())
-        self.sn.factory = "%02X" % (string.atoi(fac_str,10))
+        if fac_str != '':
+            self.sn.factory = "%02X" % (string.atoi(fac_str,10))
 
         time_str = str(self.time_lineedit.text())
         time_str = time_str[2:]

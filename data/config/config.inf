@@ -6,10 +6,10 @@ port4 = COM42
 
 [SN]
 date = 170701
-machine = 3
+machine = 01
 number = 0
 mesh = 01
-sn = 07300000
+sn = 07100000
 factory = 01
 ccm = 01
 
