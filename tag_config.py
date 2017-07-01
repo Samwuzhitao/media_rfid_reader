@@ -86,11 +86,11 @@ class tag_ui(QFrame):
                 s.close()
             except serial.SerialException:
                 pass
-
+        print ser_list
         # 发送链接指令
         for item in ser_list:
             try:
-                ser = serial.Serial( ports_dict[item], 115200)
+                ser = serial.Serial( ports_dict[item], 115200, timeout = 0.5)
             except serial.SerialException:
                 pass
             if ser:
