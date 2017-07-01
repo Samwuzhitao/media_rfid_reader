@@ -38,9 +38,10 @@ class s_cmd_mechine(QObject):
         super(s_cmd_mechine, self).__init__(parent)
         self.led_dict       = led_dict
         self.cmd_status     = [0,0,0,0]
+        self.old_cmd_status = [0,0,0,0]
         self.tag_uid        = ['','','','']
-        self.send_cmd_count = 0
-        self.status      = ['blue','blue','blue','blue']
+        self.write_tag_cmd_count = 0
+        self.write_tag_start_flag  = 0
         self.connect_cmd = "5A 02 0D 01 0E CA"
         self.connect_cmd = self.connect_cmd.replace(' ','')
         self.connect_cmd = self.connect_cmd.decode("hex")
@@ -65,12 +66,6 @@ class s_cmd_mechine(QObject):
             "clear_tag" :self.clear_tag_cmd
         }
 
-    def clear_cmd_status(self):
-         self.cmd_status[0]  = 0
-         self.cmd_status[1]  = 0
-         self.cmd_status[2]  = 0
-         self.cmd_status[3]  = 0
-
     def get_cmd_status(self):
         max_cmd_status = self.cmd_status[0]
         min_cmd_status = self.cmd_status[0]
@@ -85,20 +80,32 @@ class s_cmd_mechine(QObject):
         self.emit(SIGNAL('sn_update(int,int,int,int)'),
             self.cmd_status[0],self.cmd_status[1],self.cmd_status[2],self.cmd_status[3])
         send_cmd_name = None
+
+        # self.send_cmd_count = self.send_cmd_count + 1
         # 指令改变，只要有一个没有寻到卡片就返回寻卡指令
 
         max_status,min_status = self.get_cmd_status()
         # print max_status,min_status
 
         if max_status == 2 and min_status == 2:
-            self.clear_cmd_status()
-            return None
+            send_cmd_name = "read_uid"
+            return self.cmd_dict[send_cmd_name]
+
         if max_status == 3 and min_status == 1:
             send_cmd_name = "read_uid"
             return self.cmd_dict[send_cmd_name]
 
         if min_status == 1:
             send_cmd_name = "set_tag"
+            if self.write_tag_start_flag == 0:
+                self.write_tag_cmd_count = 0
+                self.write_tag_start_flag = 1
+            else:
+                self.write_tag_cmd_count = self.write_tag_cmd_count + 1
+                if self.write_tag_cmd_count >= 5:
+                    self.write_tag_cmd_count = 0
+                    self.write_tag_start_flag = 0
+
             return self.cmd_dict[send_cmd_name]
 
         if min_status == 0:
@@ -113,9 +120,6 @@ class s_cmd_mechine(QObject):
             return self.cmd_dict[send_cmd_name]
         else:
             return None
-
-    def set_status(self,index,new_status):
-        self.status[index-1] = new_status
 
 class ComWork(QDialog):
     def __init__(self,ser_list,monitor_dict,parent=None):
@@ -227,6 +231,9 @@ class ComWork(QDialog):
         i = 0
         max_status,min_status = self.send_cmd_machine.get_cmd_status()
 
+        if max_status == 0:
+            self.send_cmd_machine.write_tag_start_flag = 0
+
         if max_status == 2 and min_status == 2:
             for item in self.led_dict:
                 i = i + 1
@@ -235,15 +242,16 @@ class ComWork(QDialog):
             self.sync_sn_str()
             self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
         else:
-            i = 0
-            for item in status:
-                if status[i] == 2:
-                    self.led_dict[i+1].set_color('green')
-                if status[i] == 1:
-                    self.led_dict[i+1].set_color('red')
-                if status[i] == 0:
-                    self.led_dict[i+1].set_color('blue')
-                i = i + 1
+            if self.send_cmd_machine.write_tag_start_flag == 0:
+                i = 0
+                for item in status:
+                    if status[i] == 2:
+                        self.led_dict[i+1].set_color('green')
+                    if status[i] == 1:
+                        self.led_dict[i+1].set_color('red')
+                    if status[i] == 0:
+                        self.led_dict[i+1].set_color('blue')
+                    i = i + 1
 
     def uart_auto_send_script(self):
         send_cmd = self.send_cmd_machine.get_cmd()
@@ -266,7 +274,6 @@ class ComWork(QDialog):
                                 self.monitor_dict[item].com.write(send_cmd)
                         else:
                             self.monitor_dict[item].com.write(send_cmd)
-                        # print item,self.send_cmd_machine.cmd_status[i]
             i = i + 1
 
     def uart_cmd_decode(self,port,data):
@@ -285,14 +292,16 @@ class ComWork(QDialog):
         if data[2:4] == '06': # 读取UID指令
             # print data[4:12]
             if data[4:12] == '00000000':
+                self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
                 self.send_cmd_machine.cmd_status[ser_index-1] = 0
-                if self.send_cmd_machine.cmd_status[ser_index-1] == 0:
+                if self.send_cmd_machine.old_cmd_status[ser_index-1] == 0:
                     print u"读取UID FAIL"
                 else:
                     print u"匹配UID FIAL！标签移开"
             else:
-                if self.send_cmd_machine.cmd_status[ser_index-1] == 0:
-                    self.send_cmd_machine.cmd_status[ser_index-1] = 1
+                self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
+                self.send_cmd_machine.cmd_status[ser_index-1] = 1
+                if self.send_cmd_machine.old_cmd_status[ser_index-1] == 0:
                     self.send_cmd_machine.tag_uid[ser_index-1] = data[4:12]
                     print u"读取UID OK，记录UID！"
                 else:
@@ -302,9 +311,10 @@ class ComWork(QDialog):
 
         if data[2:4] == '0D':
             # print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:30])
+            self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
             if data[4:30] == self.conf_frame.sn.get_tag():
                 print "验证标签TAG OK"
-                self.send_cmd_machine.cmd_status[ser_index-1] = 3
+                self.send_cmd_machine.cmd_status[ser_index-1] = 2
             else:
                 print "验证标签TAG FAIL"
                 self.send_cmd_machine.cmd_status[ser_index-1] = 3
