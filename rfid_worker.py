@@ -213,8 +213,6 @@ class ComWork(QDialog):
 
         self.connect(self.send_cmd_machine,SIGNAL('sn_update(int,int,int,int)'),self.update_result )
 
-
-
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
         self.timer.start(500)
@@ -383,13 +381,21 @@ class ComWork(QDialog):
         print self.ser_list
 
         for item in self.ser_list:
-            ser = serial.Serial( item, 115200, timeout = 0.5)
-            self.monitor_dict[item] = ComMonitor(ser)
-            print u"启动串口监听线程! %s " % item
-            self.connect( self.monitor_dict[item],
-                    SIGNAL('r_cmd_message(QString,QString)'),
-                    self.uart_cmd_decode)
-            self.monitor_dict[item].start()
+            ser = None
+            try:
+                ser = serial.Serial( item, 115200, timeout = 0.5)
+                # s.close()
+            except serial.SerialException:
+                pass
+            if ser:
+                self.monitor_dict[item] = ComMonitor(ser)
+                print u"启动串口监听线程! %s " % item
+                self.connect( self.monitor_dict[item],
+                        SIGNAL('r_cmd_message(QString,QString)'),
+                        self.uart_cmd_decode)
+                self.monitor_dict[item].start()
+            else:
+                print u"创建串口监听线程! %s 失败，请检查设备是否接上或者更改变" % item
 
         self.conf_frame.sn.machine = self.config.get('SN', 'machine' )
         self.conf_frame.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
@@ -412,8 +418,9 @@ class ComWork(QDialog):
         result = comsetting_dialog.exec_()
 
         for item in comsetting_dialog.ser_list:
-            comsetting_dialog.monitor_dict[item].com.close()
-            comsetting_dialog.monitor_dict[item].quit()
+            if comsetting_dialog.monitor_dict.has_key(item):
+                comsetting_dialog.monitor_dict[item].com.close()
+                comsetting_dialog.monitor_dict[item].quit()
 
 
 
