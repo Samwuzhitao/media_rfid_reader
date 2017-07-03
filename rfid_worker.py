@@ -150,6 +150,7 @@ class ComWork(QDialog):
         self.config.readfp(open(self.config_file_name, "rb"))
 
         self.conf_frame = sn_ui( 16,1,self.config, self.config_file_name )
+        self.config_data_update()
 
         self.com1_lable = QLabel(u"标签1")
         self.com1_lable.setAlignment(Qt.AlignCenter)
@@ -206,7 +207,6 @@ class ComWork(QDialog):
 
         self.setLayout(box)
 
-        self.config_data_update()
         self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
@@ -383,8 +383,8 @@ class ComWork(QDialog):
         time_str = time_str.replace(' ','')
         self.conf_frame.sn.date = time_str
 
-        mac_str = str(self.conf_frame.line_lineedit.text())
-        self.conf_frame.sn.machine = mac_str
+        line_str = str(self.conf_frame.line_type_combo.currentText())
+        self.conf_frame.sn.machine = line_str
 
     def led_status_sync(self):
         index = 0
@@ -434,9 +434,12 @@ class ComWork(QDialog):
         self.conf_frame.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
         self.conf_frame.sn.mesh    = self.config.get('SN', 'mesh'    )
         self.conf_frame.sn.factory = self.config.get('SN', 'factory' )
+        self.conf_frame.sn.ccm = self.config.get('SN', 'ccm' )
+        print self.conf_frame.sn
         self.conf_frame.manufacturer_lineedit.setText(self.conf_frame.sn.factory)
-        self.conf_frame.line_lineedit.setText(self.conf_frame.sn.machine)
+        self.conf_frame.line_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.machine)-1)
         self.conf_frame.mesh_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.mesh)-1)
+        self.conf_frame.ccm_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.ccm)-1)
 
         self.sync_sn_str()
         self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
