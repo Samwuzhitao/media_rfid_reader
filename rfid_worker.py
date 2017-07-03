@@ -57,13 +57,22 @@ class s_cmd_mechine(QObject):
         self.clear_tag_cmd  = "5A 04 00 00 3D 01 38 CA"
         self.clear_tag_cmd  = self.clear_tag_cmd.replace(' ','')
         self.clear_tag_cmd  = self.clear_tag_cmd.decode("hex")
+        self.beep_1_cmd  = "5A 01 01 00 CA"
+        # self.beep_1_cmd  = "5A 01 01 01 CA"
+        self.beep_1_cmd  = self.beep_1_cmd.replace(' ','')
+        self.beep_1_cmd  = self.beep_1_cmd.decode("hex")
+        self.beep_3_cmd  = "5A 01 02 03 CA"
+        self.beep_3_cmd  = self.beep_3_cmd.replace(' ','')
+        self.beep_3_cmd  = self.beep_3_cmd.decode("hex")
 
         self.cmd_dict    = {
             "connect"   :self.connect_cmd   ,
             "disconnect":self.disconnect_cmd,
             "read_uid"  :self.read_uid_cmd  ,
             "set_tag"   :self.set_tag_cmd   ,
-            "clear_tag" :self.clear_tag_cmd
+            "clear_tag" :self.clear_tag_cmd ,
+            "beep_1"    :self.beep_1_cmd    ,
+            "beep_3"    :self.beep_3_cmd
         }
 
     def get_cmd_status(self):
@@ -228,6 +237,12 @@ class ComWork(QDialog):
             self.conf_frame.sn.number = self.conf_frame.sn.number + 1
             self.sync_sn_str()
             self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
+            i = 0
+            for item in self.ser_list:
+                if self.monitor_dict.has_key(item):
+                    if self.monitor_dict[item].com.isOpen() == True:
+                        self.monitor_dict[item].com.write(self.send_cmd_machine.cmd_dict["beep_1"])
+                i = i + 1
         else:
             if self.send_cmd_machine.write_tag_start_flag == 0:
                 i = 0
