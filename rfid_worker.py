@@ -292,66 +292,44 @@ class ComWork(QDialog):
                 self.send_cmd_machine.cmd_status[ser_index-1] = 0
                 if self.send_cmd_machine.old_cmd_status[ser_index-1] == 0:
                     result_str = u"读取UID FAIL"
-                    print result_str
-                    # log_str = log_str + result_str
                 else:
                     result_str =u"匹配UID FIAL！标签移开"
-                    print result_str
-                    # log_str = log_str + result_str
             else:
                 self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
                 self.send_cmd_machine.cmd_status[ser_index-1] = 1
                 if self.send_cmd_machine.old_cmd_status[ser_index-1] == 0:
                     self.send_cmd_machine.tag_uid[ser_index-1] = data[4:12]
                     result_str = u"读取UID OK，记录UID！"
-                    print result_str
-                    # log_str = log_str + result_str
                 else:
                     if self.send_cmd_machine.tag_uid[ser_index-1] == data[4:12]:
                         self.send_cmd_machine.cmd_status[ser_index-1] = 3
                     result_str = u"匹配UID OK！标签未移开"
-                    print result_str
-                    # log_str = log_str + result_str
 
         if data[2:4] == '0D':
             # print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:30])
             self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
             if data[4:30] == self.conf_frame.sn.get_tag():
                 result_str = u"验证标签TAG OK"
-                print result_str
-                # log_str = log_str + result_str
                 self.send_cmd_machine.cmd_status[ser_index-1] = 2
             else:
                 result_str = u"验证标签TAG FAIL"
-                print result_str
-                # log_str = log_str + result_str
                 self.send_cmd_machine.cmd_status[ser_index-1] = 3
 
         # 解析其他结果的返回
         if data[2:4] == '02':
             if data[4:8] == '0D01': # 打开串口OK
                 result_str = u"打开串口OK"
-                print result_str
-                # log_str = log_str + result_str
             if data[4:8] == '0D02': # 打开串口失败
                 result_str = u"打开串口失败"
-                print result_str
-                # log_str = log_str + result_str
             if data[4:8] == 'CC01': # 关闭串口OK
                 result_str = u"关闭串口OK"
-                print result_str
-                # log_str = log_str + result_str
             if data[4:8] == '2D01': # 设置标签TAG OK
                 self.send_cmd_machine.cmd_status[ser_index-1] = 2
                 result_str = u"设置标签TAG OK"
-                print result_str
-                # log_str = log_str + result_str
             if data[4:8] == '2D04': # 设置标签TAG FAIL
                 self.send_cmd_machine.cmd_status[ser_index-1] = 1
                 result_str = u"设置标签TAG FAIL"
-                print result_str
-                # log_str = log_str + result_str
-
+        print result_str
         logging.debug( u"%s %s" % (log_str,result_str) )
 
     def sync_sn_str(self):
