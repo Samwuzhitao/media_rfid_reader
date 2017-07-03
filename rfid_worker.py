@@ -81,11 +81,7 @@ class s_cmd_mechine(QObject):
             self.cmd_status[0],self.cmd_status[1],self.cmd_status[2],self.cmd_status[3])
         send_cmd_name = None
 
-        # self.send_cmd_count = self.send_cmd_count + 1
-        # 指令改变，只要有一个没有寻到卡片就返回寻卡指令
-
         max_status,min_status = self.get_cmd_status()
-        # print max_status,min_status
 
         if max_status == 2 and min_status == 2:
             send_cmd_name = "read_uid"
@@ -214,7 +210,7 @@ class ComWork(QDialog):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
-        self.timer.start(500)
+        self.timer.start(600)
 
     def update_result(self,status1,status2,status3,status4):
         status = [status1,status2,status3 ,status4]
@@ -440,7 +436,15 @@ class ComWork(QDialog):
         self.conf_frame.line_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.machine)-1)
         self.conf_frame.mesh_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.mesh)-1)
         self.conf_frame.ccm_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.ccm)-1)
-
+        mesh_str = unicode(self.conf_frame.mesh_type_combo.currentText())
+        self.conf_frame.mesh_type_combo.clear()
+        self.conf_frame.mesh_type_combo.addItems([mesh_str])
+        ccm_str = unicode(self.conf_frame.ccm_type_combo.currentText())
+        self.conf_frame.ccm_type_combo.clear()
+        self.conf_frame.ccm_type_combo.addItems([ccm_str])
+        line_str = unicode(self.conf_frame.line_type_combo.currentText())
+        self.conf_frame.line_type_combo.clear()
+        self.conf_frame.line_type_combo.addItems([line_str])
         self.sync_sn_str()
         self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
 

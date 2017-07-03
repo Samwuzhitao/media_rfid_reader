@@ -77,8 +77,7 @@ class RFIDReader(QWidget):
         self.p_button.clicked.connect(self.start_work)
 
     def keyPressEvent(self, e):
-        print e.key()
-        if e.key() == Qt.Key_Escape: # Enter键
+        if e.key() == Qt.Key_Escape: # Esc键
             self.close()
         if e.key() == Qt.Key_1:      # 1 键
             self.open_new_session()
@@ -88,10 +87,6 @@ class RFIDReader(QWidget):
     def open_new_session(self):
         if login():
             ComSetting.get_com_monitor()
-            # if self.monitor_dict :
-            #     # 创建监听线程
-            #     for item in self.ser_list:
-            #         print u"启动串口监听线程! %s " % item
 
     def start_work(self):
         ComWork.work_start()

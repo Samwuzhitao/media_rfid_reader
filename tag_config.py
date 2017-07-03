@@ -85,7 +85,7 @@ class tag_ui(QFrame):
                 s.close()
             except serial.SerialException:
                 pass
-        print ser_list
+        # print ser_list
         # 发送链接指令
         for item in ser_list:
             try:
@@ -103,7 +103,7 @@ class tag_ui(QFrame):
                                 self.tag.led_list[tag_index].set_color("green")
                                 self.tag.monitor_dict[item] = ComMonitor(ser)
                                 self.tag.ser_list.append(item)
-                                print  self.tag.ser_list
+                                print "标签%d 绑定串口%s" % (tag_index,item)
                                 return item
                             if cmd_str[4:8] == '0D02': # 打开串口失败
                                 self.tag.led_list[tag_index].set_color("blue")
