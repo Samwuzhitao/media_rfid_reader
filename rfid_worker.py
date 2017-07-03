@@ -29,7 +29,7 @@ CONF_FONT_SIZE = 16
 logging.basicConfig ( # 配置日志输出的方式及格式
     level = logging.DEBUG,
     filename = log_name,
-    filemode = 'w',
+    filemode = 'a',
     format = u'【%(asctime)s】 %(message)s',
 )
 
@@ -89,11 +89,11 @@ class s_cmd_mechine(QObject):
 
         if max_status == 2 and min_status == 2:
             send_cmd_name = "read_uid"
-            return self.cmd_dict[send_cmd_name]
+            return send_cmd_name,self.cmd_dict[send_cmd_name]
 
         if max_status == 3 and min_status == 1:
             send_cmd_name = "read_uid"
-            return self.cmd_dict[send_cmd_name]
+            return send_cmd_name,self.cmd_dict[send_cmd_name]
 
         if min_status == 1:
             send_cmd_name = "set_tag"
@@ -106,20 +106,20 @@ class s_cmd_mechine(QObject):
                     self.write_tag_cmd_count = 0
                     self.write_tag_start_flag = 0
 
-            return self.cmd_dict[send_cmd_name]
+            return send_cmd_name,self.cmd_dict[send_cmd_name]
 
         if min_status == 0:
             send_cmd_name = "read_uid"
-            return self.cmd_dict[send_cmd_name]
+            return send_cmd_name,self.cmd_dict[send_cmd_name]
 
         if min_status == 2 or min_status == 3:
             send_cmd_name = "read_uid"
-            return self.cmd_dict[send_cmd_name]
+            return send_cmd_name,self.cmd_dict[send_cmd_name]
 
         if send_cmd_name:
-            return self.cmd_dict[send_cmd_name]
+            return send_cmd_name,self.cmd_dict[send_cmd_name]
         else:
-            return None
+            return None,None
 
 class ComWork(QDialog):
     def __init__(self,parent=None):
@@ -245,15 +245,22 @@ class ComWork(QDialog):
                     i = i + 1
 
     def uart_auto_send_script(self):
-        send_cmd = self.send_cmd_machine.get_cmd()
+        max_status,min_status = self.send_cmd_machine.get_cmd_status()
+        cmd_status_str = 'status: [ %d %d %d %d] cmd: ' % \
+           (self.send_cmd_machine.cmd_status[0],self.send_cmd_machine.cmd_status[1],
+            self.send_cmd_machine.cmd_status[2],self.send_cmd_machine.cmd_status[3])
+
+        cmd_name,send_cmd = self.send_cmd_machine.get_cmd()
+        cmd_status_str = cmd_status_str + cmd_name
+        print cmd_status_str
+
+        logging.debug( "%s" % cmd_status_str )
 
         if send_cmd == self.send_cmd_machine.set_tag_cmd:
             send_cmd =  self.conf_frame.sn.get_tag_cmd()
             print "TAG_CMD = " + send_cmd
+            logging.debug( u"TAG_CMD = %s" % send_cmd )
             send_cmd = send_cmd.decode("hex")
-
-        max_status,min_status = self.send_cmd_machine.get_cmd_status()
-        print self.send_cmd_machine.cmd_status
 
         i = 0
         for item in self.ser_list:
@@ -270,7 +277,9 @@ class ComWork(QDialog):
     def uart_cmd_decode(self,port,data):
         port = str(port)
         data = str(data)
-        print port,data,
+        # print port,data,
+        log_str = u"[%s]: %s " % (port,data)
+        print log_str,
 
         # 获取当前串口对应的标签号
         i = 0
@@ -286,44 +295,68 @@ class ComWork(QDialog):
                 self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
                 self.send_cmd_machine.cmd_status[ser_index-1] = 0
                 if self.send_cmd_machine.old_cmd_status[ser_index-1] == 0:
-                    print u"读取UID FAIL"
+                    result_str = u"读取UID FAIL"
+                    print result_str
+                    # log_str = log_str + result_str
                 else:
-                    print u"匹配UID FIAL！标签移开"
+                    result_str =u"匹配UID FIAL！标签移开"
+                    print result_str
+                    # log_str = log_str + result_str
             else:
                 self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
                 self.send_cmd_machine.cmd_status[ser_index-1] = 1
                 if self.send_cmd_machine.old_cmd_status[ser_index-1] == 0:
                     self.send_cmd_machine.tag_uid[ser_index-1] = data[4:12]
-                    print u"读取UID OK，记录UID！"
+                    result_str = u"读取UID OK，记录UID！"
+                    print result_str
+                    # log_str = log_str + result_str
                 else:
                     if self.send_cmd_machine.tag_uid[ser_index-1] == data[4:12]:
                         self.send_cmd_machine.cmd_status[ser_index-1] = 3
-                    print u"匹配UID OK！标签未移开"
+                    result_str = u"匹配UID OK！标签未移开"
+                    print result_str
+                    # log_str = log_str + result_str
 
         if data[2:4] == '0D':
             # print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:30])
             self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
             if data[4:30] == self.conf_frame.sn.get_tag():
-                print "验证标签TAG OK"
+                result_str = u"验证标签TAG OK"
+                print result_str
+                # log_str = log_str + result_str
                 self.send_cmd_machine.cmd_status[ser_index-1] = 2
             else:
-                print "验证标签TAG FAIL"
+                result_str = u"验证标签TAG FAIL"
+                print result_str
+                # log_str = log_str + result_str
                 self.send_cmd_machine.cmd_status[ser_index-1] = 3
 
         # 解析其他结果的返回
         if data[2:4] == '02':
             if data[4:8] == '0D01': # 打开串口OK
-                print u"打开串口OK"
+                result_str = u"打开串口OK"
+                print result_str
+                # log_str = log_str + result_str
             if data[4:8] == '0D02': # 打开串口失败
-                print u"打开串口失败"
+                result_str = u"打开串口失败"
+                print result_str
+                # log_str = log_str + result_str
             if data[4:8] == 'CC01': # 关闭串口OK
-                print u"关闭串口OK"
+                result_str = u"关闭串口OK"
+                print result_str
+                # log_str = log_str + result_str
             if data[4:8] == '2D01': # 设置标签TAG OK
                 self.send_cmd_machine.cmd_status[ser_index-1] = 2
-                print "设置标签TAG OK"
+                result_str = u"设置标签TAG OK"
+                print result_str
+                # log_str = log_str + result_str
             if data[4:8] == '2D04': # 设置标签TAG FAIL
                 self.send_cmd_machine.cmd_status[ser_index-1] = 1
-                print "设置标签TAG FAIL"
+                result_str = u"设置标签TAG FAIL"
+                print result_str
+                # log_str = log_str + result_str
+
+        logging.debug( u"%s %s" % (log_str,result_str) )
 
     def sync_sn_str(self):
         data_str = ''
