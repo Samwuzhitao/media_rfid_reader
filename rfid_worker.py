@@ -207,10 +207,9 @@ class ComWork(QDialog):
         self.setLayout(box)
 
         self.config_data_update()
-        # self.led_status_sync()
+        self.led_status_sync()
 
         self.e_button.clicked.connect(self.clear_text)
-
         self.connect(self.send_cmd_machine,SIGNAL('sn_update(int,int,int,int)'),self.update_result )
 
         self.timer = QTimer()
@@ -358,15 +357,16 @@ class ComWork(QDialog):
         index = 0
         for item in self.ser_list:
             index = index + 1
-            if self.monitor_dict[item].com.isOpen() == True:
-                if index == 1:
-                    self.led1.set_color("green")
-                if index == 2:
-                    self.led2.set_color("green")
-                if index == 3:
-                    self.led3.set_color("green")
-                if index == 4:
-                    self.led4.set_color("green")
+            if self.monitor_dict.has_key(item):
+                if self.monitor_dict[item].com.isOpen() == True:
+                    if index == 1:
+                        self.led1.set_color("green")
+                    if index == 2:
+                        self.led2.set_color("green")
+                    if index == 3:
+                        self.led3.set_color("green")
+                    if index == 4:
+                        self.led4.set_color("green")
 
     def config_data_update(self):
         port1 = self.config.get('serial', 'port1' )

@@ -76,10 +76,18 @@ class ComSetting(QDialog):
         self.bind_button.clicked.connect(self.auto_search_device)
 
     def auto_search_device(self):
-        self.tag_frame.uart_auto_connect(0)
-        self.tag_frame.uart_auto_connect(1)
-        self.tag_frame.uart_auto_connect(2)
-        self.tag_frame.uart_auto_connect(3)
+        com1_str = self.tag_frame.uart_auto_connect(0)
+        if com1_str:
+            self.tag_frame.com1_lable.setText(u"标签1:%s" % com1_str)
+        com2_str = self.tag_frame.uart_auto_connect(1)
+        if com2_str:
+            self.tag_frame.com2_lable.setText(u"标签2:%s" % com2_str)
+        com3_str = self.tag_frame.uart_auto_connect(2)
+        if com3_str:
+            self.tag_frame.com3_lable.setText(u"标签3:%s" % com3_str)
+        com4_str = self.tag_frame.uart_auto_connect(3)
+        if com4_str:
+            self.tag_frame.com4_lable.setText(u"标签4:%s" % com4_str)
 
     def clear_text(self):
         self.conf_frame.config_data_sync()

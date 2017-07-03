@@ -68,12 +68,12 @@ class tag_ui(QFrame):
         self.setLayout(c_gbox)
 
     def uart_auto_connect(self,tag_index):
-        connect_cmd  =  "5A 02 0D 01 0E CA"
+        connect_cmd =  "5A 02 0D 01 0E CA"
         connect_cmd = str(connect_cmd.replace(' ',''))
         connect_cmd = connect_cmd.decode("hex")
-        hex_decode = HexDecode()
-        ser        = None
-        ser_list   = []
+        hex_decode  = HexDecode()
+        ser         = None
+        ser_list    = []
         ports_dict  = {}
 
         # 扫描串口
@@ -104,9 +104,10 @@ class tag_ui(QFrame):
                                 self.tag.monitor_dict[item] = ComMonitor(ser)
                                 self.tag.ser_list.append(item)
                                 print  self.tag.ser_list
+                                return item
                             if cmd_str[4:8] == '0D02': # 打开串口失败
                                 self.tag.led_list[tag_index].set_color("blue")
-                            return
+                            return None
 
 if __name__=='__main__':
     app = QApplication(sys.argv)
