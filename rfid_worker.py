@@ -449,7 +449,7 @@ class ComWork(QDialog):
     def work_start(parent = None):
         comsetting_dialog = ComWork(parent)
         result = comsetting_dialog.exec_()
-
+        comsetting_dialog.conf_frame.config_data_sync()
         for item in comsetting_dialog.ser_list:
             if comsetting_dialog.monitor_dict.has_key(item):
                 comsetting_dialog.monitor_dict[item].com.close()

@@ -97,7 +97,7 @@ class ComSetting(QDialog):
     def get_com_monitor(parent = None):
         comsetting_dialog = ComSetting(parent)
         result = comsetting_dialog.exec_()
-
+        comsetting_dialog.conf_frame.config_data_sync()
         if comsetting_dialog.config != None:
             # if comsetting_dialog.tag_frame.tag.ser_list[0]
             if len(comsetting_dialog.tag_frame.tag.ser_list) == 4:
