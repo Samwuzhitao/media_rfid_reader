@@ -232,11 +232,6 @@ class ComWork(QDialog):
 
         # 设置卡片 FAIL
         if mesh_status == MESH_SET_FAIL or mesh_status == MESH_SET_OK :
-            if mesh_status == MESH_SET_OK :
-                # 序列号增加
-                self.conf_frame.sn.number = self.conf_frame.sn.number + 1
-                self.sync_sn_str()
-                self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
             i = 0
             for item in status:
                 if status[i] == TAG_SET_FAIL:
@@ -339,7 +334,6 @@ class ComWork(QDialog):
         if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL  or \
            mesh_status == MESH_CHECK_SHOW:
             self.mesh_s.set_tag_count = self.mesh_s.set_tag_count + 1
-
             i = 0
             if self.mesh_s.set_tag_count > 3:
                 for item in self.ser_list:
@@ -355,6 +349,13 @@ class ComWork(QDialog):
                             if send_cmd:
                                 self.monitor_dict[item].com.write(send_cmd)
                 i = i + 1
+
+            if mesh_status == MESH_SET_OK :
+                # 序列号增加
+                if self.mesh_s.set_tag_count == 0:
+                    self.conf_frame.sn.number = self.conf_frame.sn.number + 1
+                    self.sync_sn_str()
+                    self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
             return
 
     def uart_cmd_decode(self,port,data):

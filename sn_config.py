@@ -133,9 +133,9 @@ class sn_ui(QFrame):
         self.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         self.setLayout(c_hbox)
 
-        self.line_type_combo.currentIndexChanged.connect(self.config_data_sync)
-        self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
-        self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
+        self.line_type_combo.currentIndexChanged.connect(self.line_change_sync)
+        self.mesh_type_combo.currentIndexChanged.connect(self.mesh_change_sync)
+        self.ccm_type_combo.currentIndexChanged.connect(self.ccm_change_sync)
 
     def sync_sn_update(self):
         self.sn.date    = self.config.get('SN', 'date'    )
@@ -156,7 +156,7 @@ class sn_ui(QFrame):
         self.sync_sn_str()
         self.des_lineedit.setText(self.sn.get_sn())
 
-    def sync_sn_str(self):
+    def mesh_change_sync(self):
         new_data = ''
         mesh_str = unicode(self.mesh_type_combo.currentText())
         if mesh_str == u'0x01:复合滤网\PM2.5滤网':
@@ -173,6 +173,8 @@ class sn_ui(QFrame):
             self.sn.number = 0
             self.sn.mesh = new_data
 
+    def ccm_change_sync(self):
+        new_data = ''
         ccm_str = unicode(self.ccm_type_combo.currentText())
         if ccm_str == u'0x01:20000':
             new_data = '01'
@@ -182,22 +184,34 @@ class sn_ui(QFrame):
             self.sn.number = 0
             self.sn.ccm = new_data
 
+    def factory_change_sync(self):
+        new_data = ''
         new_data = str(self.manufacturer_lineedit.text())
         if new_data != '' and new_data != self.sn.factory:
             self.sn.factory = "%02X" % (string.atoi(new_data,10))
             self.sn.number  = 0
 
+    def line_change_sync(self):
+        new_data = ''
+        new_data = str(self.line_type_combo.currentText())
+        if new_data != self.sn.machine:
+            self.sn.machine = new_data
+            self.sn.number= 0
+
+
+    def sync_sn_str(self):
+        self.mesh_change_sync()
+        self.ccm_change_sync()
+        self.factory_change_sync()
+        self.line_change_sync()
+
+        new_data = ''
         new_data = str(self.time_lineedit.text())
         new_data = new_data[2:]
         new_data = new_data.replace('-','')
         new_data = new_data.replace(' ','')
         if new_data != self.sn.date:
             self.sn.date  = new_data
-            self.sn.number= 0
-
-        new_data = str(self.line_type_combo.currentText())
-        if new_data != self.sn.machine:
-            self.sn.machine = new_data
             self.sn.number= 0
 
     def config_data_sync(self):
