@@ -59,6 +59,8 @@ class MeshStatus(QObject):
         self.mesh_status = MESH_IDLE
         self.tag_status_list = []
         self.tag_index_list  = [0,0,0,0]
+        self.tag_status      = [TAG_IDLE,TAG_IDLE,TAG_IDLE,TAG_IDLE]
+        # self.tag_old_status  = [TAG_IDLE,TAG_IDLE,TAG_IDLE,TAG_IDLE]
         self.set_tag_count  = 0
         self.connect_cmd    = "5A 02 0D 01 0E CA"
         self.disconnect_cmd = "5A 02 CC 01 CF CA"
@@ -77,26 +79,8 @@ class MeshStatus(QObject):
             "BEEP3"     :self.beep_3_cmd
         }
 
-        self.tag1_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
-        self.tag_status_list.append(self.tag1_status)
-        self.tag2_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
-        self.tag_status_list.append(self.tag2_status)
-        self.tag3_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
-        self.tag_status_list.append(self.tag3_status)
-        self.tag4_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
-        self.tag_status_list.append(self.tag4_status)
-        self.tag_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE,TAG_IDLE]
-
     def update_tag_status(self,tag_index,new_status):
-        # 滤网移动时的状态滤波处理
-        if self.mesh_status == MESH_MOVE_OUT:
-            self.tag_index_list[tag_index] = (self.tag_index_list[tag_index] + 1) % 3
-            self.tag_status_list[tag_index][self.tag_index_list[tag_index]] = new_status
-            self.tag_status[tag_index] = (self.tag_status_list[tag_index][self.tag_index_list[tag_index]] + \
-                            self.tag_status_list[tag_index][(self.tag_index_list[tag_index] + 3 - 1) % 3] + \
-                            self.tag_status_list[tag_index][(self.tag_index_list[tag_index] + 3 - 2) % 3]) / 3
-        else:
-            self.tag_status[tag_index] = new_status
+        self.tag_status[tag_index] = new_status
 
     def get_max_min_tag_status(self):
         max_status = self.tag_status[0]
@@ -131,10 +115,10 @@ class MeshStatus(QObject):
             return self.mesh_status
 
         if  max_s == TAG_SET_FAIL :
-            self.mesh_status = MESH_SET_FIAL
+            self.mesh_status = MESH_SET_FAIL
             return self.mesh_status
 
-        if  max_s == TAG_CHECK_FAIL or min_s == TAG_CHECK_OK:
+        if  max_s <= TAG_CHECK_FAIL and min_s >= TAG_SET_OK:
             self.mesh_status = MESH_CHECK_SHOW
             return self.mesh_status
 
@@ -225,18 +209,18 @@ class ComWork(QDialog):
         self.setLayout(box)
 
         self.e_button.clicked.connect(self.clear_text)
-        self.connect(self.mesh_s,SIGNAL('sn_update(int,int,int,int)'),self.update_result )
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
         self.timer.start(500)
 
-    def update_result(self,status1,status2,status3,status4):
-        status = [status1,status2,status3 ,status4]
+    def update_led_status(self):
+        status = self.mesh_s.tag_status
 
         mesh_status = self.mesh_s.get_mesh_status()
         print mesh_status,status
-        logging.debug( u"MESH:%d TAG:[%d %d %d %d]" % (mesh_status,status[0],status[1],status[2],status[3]) )
+        if mesh_status:
+            logging.debug( u"MESH:%d TAG:[%d %d %d %d]" % (mesh_status,status[0],status[1],status[2],status[3]) )
 
         # 空闲状态显示
         if mesh_status == MESH_IDLE :
@@ -292,14 +276,16 @@ class ComWork(QDialog):
             return
 
     def uart_auto_send_script(self):
+        self.update_led_status()
+
         mesh_status = self.mesh_s.mesh_status
 
         cmd_name,send_cmd = self.mesh_s.get_cmd()
         print cmd_name,send_cmd
         logging.debug( u"%s: %s" % (cmd_name,send_cmd) )
-
-        send_cmd = send_cmd.replace(' ','')
-        send_cmd = send_cmd.decode("hex")
+        if send_cmd:
+            send_cmd = send_cmd.replace(' ','')
+            send_cmd = send_cmd.decode("hex")
 
         if mesh_status == MESH_SET_TAG:
             send_cmd =  self.conf_frame.sn.get_tag_cmd()
@@ -322,8 +308,10 @@ class ComWork(QDialog):
             for item in self.ser_list:
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
-                        if self.mesh_s.tag_status[i] == TAG_IDLE:
-                            self.monitor_dict[item].com.write(send_cmd)
+                        if self.mesh_s.tag_status[i] == TAG_IDLE or \
+                           self.mesh_s.tag_status[i] == TAG_MOVE_OVER:
+                            if send_cmd:
+                                self.monitor_dict[item].com.write(send_cmd)
                 i = i + 1
             return
 
@@ -343,18 +331,29 @@ class ComWork(QDialog):
             for item in self.ser_list:
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
+                        if send_cmd:
                             self.monitor_dict[item].com.write(send_cmd)
                 i = i + 1
             return
 
         if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL  or \
            mesh_status == MESH_CHECK_SHOW:
+            self.mesh_s.set_tag_count = self.mesh_s.set_tag_count + 1
+
+            i = 0
+            if self.mesh_s.set_tag_count > 3:
+                for item in self.ser_list:
+                    self.mesh_s.update_tag_status(i,TAG_MOVE_OUT)
+                    i = i + 1
+                self.mesh_s.set_tag_count = 0
+
             i = 0
             for item in self.ser_list:
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
-                            self.monitor_dict[item].com.write(send_cmd)
-                self.mesh_s.update_tag_status(i,TAG_MOVE_OUT)
+                        if self.mesh_s.set_tag_count == 0:
+                            if send_cmd:
+                                self.monitor_dict[item].com.write(send_cmd)
                 i = i + 1
             return
 
@@ -370,37 +369,35 @@ class ComWork(QDialog):
         # 获取当前串口对应的标签号
         i = 0
         for item in self.ser_list:
-            i = i + 1
             if item == port:
                 ser_index = i
+            i = i + 1
 
         # 解析读取UID指令对应的返回
         if data[2:4] == '06': # 读取UID指令
             # print data[4:12]
             if data[4:12] == '00000000':
-                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or \
-                mesh_status == MESH_MOVE_OVER:
+                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or mesh_status == MESH_MOVE_OVER:
                     result_str = u"读取UID FAIL"
-                    self.mesh_s.update_tag_status(ser_index-1,TAG_IDLE)
+                    self.mesh_s.update_tag_status(ser_index,TAG_IDLE)
                 if mesh_status == MESH_MOVE_OUT:
-                    result_str =u"匹配UID FIAL！标签移开"
-                    self.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_OVER)
+                    self.mesh_s.update_tag_status(ser_index,TAG_MOVE_OVER)
+                    result_str = u"匹配UID FIAL！标签移开"
             else:
-                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or \
-                   mesh_status == MESH_MOVE_OVER:
-                    self.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_IN)
+                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or mesh_status == MESH_MOVE_OVER:
+                    self.mesh_s.update_tag_status(ser_index,TAG_MOVE_IN)
                     result_str = u"读取UID OK，记录UID！"
                 if mesh_status == MESH_MOVE_OUT:
-                    self.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_OUT)
+                    self.mesh_s.update_tag_status(ser_index,TAG_MOVE_OUT)
                     result_str = u"匹配UID OK！标签未移开"
 
         if data[2:4] == '0D':
             if data[4:30] == self.conf_frame.sn.get_tag():
                 result_str = u"验证标签TAG OK"
-                self.mesh_s.update_tag_status(ser_index-1,TAG_CHECK_OK)
+                self.mesh_s.update_tag_status(ser_index,TAG_CHECK_OK)
             else:
                 result_str = u"验证标签TAG FAIL"
-                self.mesh_s.update_tag_status(ser_index-1,TAG_CHECK_FAIL)
+                self.mesh_s.update_tag_status(ser_index,TAG_CHECK_FAIL)
 
         # 解析其他结果的返回
         if data[2:4] == '02':
@@ -411,14 +408,14 @@ class ComWork(QDialog):
             if data[4:8] == 'CC01': # 关闭串口OK
                 result_str = u"关闭串口OK"
             if data[4:8] == '2D01': # 设置标签TAG OK
-                self.mesh_s.update_tag_status(ser_index-1,TAG_SET_OK)
+                self.mesh_s.update_tag_status(ser_index,TAG_SET_OK)
                 result_str = u"设置标签TAG OK"
             if data[4:8] == '2D04': # 设置标签TAG FAIL
-                self.mesh_s.update_tag_status(ser_index-1,TAG_SET_TAG)
-                self.set_tag_count = self.set_tag_count + 1
-                if self.set_tag_count >= 3:
-                    self.mesh_s.update_tag_status(ser_index-1,TAG_SET_FAIL)
-                    self.set_tag_count = 0
+                self.mesh_s.update_tag_status(ser_index,TAG_SET_TAG)
+                self.mesh_s.set_tag_count = self.mesh_s.set_tag_count + 1
+                if self.mesh_s.set_tag_count > 5:
+                    self.mesh_s.update_tag_status(ser_index,TAG_SET_FAIL)
+                    self.mesh_s.set_tag_count = 0
                 result_str = u"设置标签TAG FAIL"
         print result_str
         logging.debug( u"%s %s" % (log_str,result_str) )

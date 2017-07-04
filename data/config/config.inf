@@ -5,11 +5,11 @@ port3 = COM41
 port4 = COM42
 
 [SN]
-date = 170703
-machine = 04
-number = 7
+date = 170704
+machine = 05
+number = 32
 mesh = 03
-sn = 07400007
-factory = 02
+sn = 07500020
+factory = 01
 ccm = 02
 
