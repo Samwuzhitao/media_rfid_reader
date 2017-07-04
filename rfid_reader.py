@@ -98,7 +98,7 @@ def login():
         return True
     else:
         return False
-
+2
 if __name__=='__main__':
     app = QApplication(sys.argv)
     rfid = RFIDReader()

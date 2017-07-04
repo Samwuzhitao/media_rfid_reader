@@ -100,13 +100,13 @@ class tag_ui(QFrame):
                         cmd_str = hex_decode.r_machine(i)
                         if cmd_str:
                             if cmd_str[4:8] == '0D01': # 打开串口OK
-                                self.tag.led_list[tag_index].set_color("green")
+                                self.tag.led_list[tag_index].set_color("blue")
                                 self.tag.monitor_dict[item] = ComMonitor(ser)
                                 self.tag.ser_list.append(item)
                                 print "标签%d 绑定串口%s" % (tag_index,item)
                                 return item
                             if cmd_str[4:8] == '0D02': # 打开串口失败
-                                self.tag.led_list[tag_index].set_color("blue")
+                                self.tag.led_list[tag_index].set_color("gray")
                             return None
 
 if __name__=='__main__':

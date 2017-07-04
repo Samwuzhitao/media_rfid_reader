@@ -230,6 +230,9 @@ class ComWork(QDialog):
         if max_status == 0:
             self.send_cmd_machine.write_tag_start_flag = 0
 
+        if max_status == 3:
+            self.send_cmd_machine.write_tag_start_flag = 0
+
         if max_status == 2 and min_status == 2:
             for item in self.led_dict:
                 i = i + 1
@@ -247,12 +250,14 @@ class ComWork(QDialog):
             if self.send_cmd_machine.write_tag_start_flag == 0:
                 i = 0
                 for item in status:
+                    if status[i] == 3:
+                        self.led_dict[i+1].set_color('red')
                     if status[i] == 2:
                         self.led_dict[i+1].set_color('green')
                     if status[i] == 1:
-                        self.led_dict[i+1].set_color('red')
-                    if status[i] == 0:
                         self.led_dict[i+1].set_color('blue')
+                    if status[i] == 0:
+                        self.led_dict[i+1].set_color('gray')
                     i = i + 1
 
     def uart_auto_send_script(self):

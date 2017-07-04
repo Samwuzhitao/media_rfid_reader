@@ -13,10 +13,11 @@ class LED(QLabel):
         self.led_b = QImage('./data/ico/ledlightblue.ico')
         self.led_g = QImage('./data/ico/ledgreen.ico')
         self.led_r = QImage('./data/ico/ledred.ico')
-        self.color_dict = {'blue':self.led_b,'green':self.led_g,'red':self.led_r}
+        self.led_y = QImage('./data/ico/ledgray.ico')
+        self.color_dict = {'blue':self.led_b,'green':self.led_g,'red':self.led_r,'gray':self.led_y}
         self.resize(x,x)
         self.setAlignment(Qt.AlignCenter)
-        self.setPixmap(QPixmap.fromImage(self.color_dict['blue']).scaled(self.size(),
+        self.setPixmap(QPixmap.fromImage(self.color_dict['gray']).scaled(self.size(),
             Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
     def set_color(self,color):
