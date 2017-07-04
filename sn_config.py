@@ -133,6 +133,10 @@ class sn_ui(QFrame):
         self.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         self.setLayout(c_hbox)
 
+        self.line_type_combo.currentIndexChanged.connect(self.config_data_sync)
+        self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
+        self.mesh_type_combo.currentIndexChanged.connect(self.config_data_sync)
+
     def sync_sn_update(self):
         self.sn.date    = self.config.get('SN', 'date'    )
         self.sn.machine = self.config.get('SN', 'machine' )
@@ -153,39 +157,48 @@ class sn_ui(QFrame):
         self.des_lineedit.setText(self.sn.get_sn())
 
     def sync_sn_str(self):
-        data_str = ''
+        new_data = ''
         mesh_str = unicode(self.mesh_type_combo.currentText())
         if mesh_str == u'0x01:复合滤网\PM2.5滤网':
-            self.sn.mesh = '01'
+            new_data = '01'
         if mesh_str == u'0x02:甲醛滤网':
-            self.sn.mesh = '02'
+            new_data = '02'
         if mesh_str == u'0x03:塑料袋NFC标签':
-            self.sn.mesh = '03'
+            new_data = '03'
         if mesh_str == u'0x04:非法滤网':
-            self.sn.mesh = '04'
+            new_data = '04'
         if mesh_str == u'0xFF:没有标签':
-            self.sn.mesh = 'FF'
+            new_data = 'FF'
+        if new_data != self.sn.mesh:
+            self.sn.number = 0
+            self.sn.mesh = new_data
 
         ccm_str = unicode(self.ccm_type_combo.currentText())
-        # print ccm_str,
         if ccm_str == u'0x01:20000':
-            self.sn.ccm = '01'
+            new_data = '01'
         if ccm_str == u'0x02:40000':
-            self.sn.ccm = '02'
-        # print "ccm = %s" % self.sn.ccm
+            new_data = '02'
+        if new_data != self.sn.ccm:
+            self.sn.number = 0
+            self.sn.ccm = new_data
 
-        fac_str = str(self.manufacturer_lineedit.text())
-        if fac_str != '':
-            self.sn.factory = "%02X" % (string.atoi(fac_str,10))
+        new_data = str(self.manufacturer_lineedit.text())
+        if new_data != '' and new_data != self.sn.factory:
+            self.sn.factory = "%02X" % (string.atoi(new_data,10))
+            self.sn.number  = 0
 
-        time_str = str(self.time_lineedit.text())
-        time_str = time_str[2:]
-        time_str = time_str.replace('-','')
-        time_str = time_str.replace(' ','')
-        self.sn.date = time_str
+        new_data = str(self.time_lineedit.text())
+        new_data = new_data[2:]
+        new_data = new_data.replace('-','')
+        new_data = new_data.replace(' ','')
+        if new_data != self.sn.date:
+            self.sn.date  = new_data
+            self.sn.number= 0
 
-        mac_str = str(self.line_type_combo.currentText())
-        self.sn.machine = mac_str
+        new_data = str(self.line_type_combo.currentText())
+        if new_data != self.sn.machine:
+            self.sn.machine = new_data
+            self.sn.number= 0
 
     def config_data_sync(self):
         self.sync_sn_str()

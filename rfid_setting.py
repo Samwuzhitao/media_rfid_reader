@@ -46,7 +46,6 @@ class ComSetting(QDialog):
         e_layout.addWidget(self.bind_button)
         e_layout.addWidget(self.clear_button)
 
-
         self.config = ConfigParser.ConfigParser()
         self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
         self.config.readfp(open(self.config_file_name, "rb"))
