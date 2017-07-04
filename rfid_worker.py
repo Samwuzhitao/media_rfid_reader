@@ -18,6 +18,7 @@ from cmd_rev_decode import *
 from com_monitor    import *
 from led            import *
 from sn_config      import *
+from tag_config     import *
 
 ser           = 0
 input_count   = 0
@@ -25,6 +26,13 @@ LOGTIMEFORMAT = '%Y%m%d%H'
 log_time      = time.strftime( LOGTIMEFORMAT,time.localtime(time.time()))
 log_name      = "log-%s.txt" % log_time
 CONF_FONT_SIZE = 16
+
+logging.basicConfig ( # 配置日志输出的方式及格式
+    level = logging.DEBUG,
+    filename = log_name,
+    filemode = 'a',
+    format = u'【%(asctime)s】 %(message)s',
+)
 
 MESH_IDLE       = 0
 MESH_MOVE_IN    = 1
@@ -45,11 +53,30 @@ TAG_CHECK_FAIL = 6
 TAG_MOVE_OUT   = 7
 TAG_MOVE_OVER  = 8
 
-class mesh_status():
-    def __init__(self):
+class MeshStatus(QObject):
+    def __init__(self,parent=None):
+        super(MeshStatus, self).__init__(parent)
         self.mesh_status = MESH_IDLE
         self.tag_status_list = []
         self.tag_index_list  = [0,0,0,0]
+        self.set_tag_count  = 0
+        self.connect_cmd    = "5A 02 0D 01 0E CA"
+        self.disconnect_cmd = "5A 02 CC 01 CF CA"
+        self.read_uid_cmd   = "5A 03 55 49 44 5B CA"
+        self.set_tag_cmd    = "5A 09 06 0F 42 40 17 06 09 01 01 1A CA"
+        self.clear_tag_cmd  = "5A 04 00 00 3D 01 38 CA"
+        self.beep_1_cmd     = "5A 01 01 00 CA"
+        self.beep_3_cmd     = "5A 01 02 03 CA"
+        self.cmd_dict       = {
+            "CONNECT"   :self.connect_cmd   ,
+            "DISCONNECT":self.disconnect_cmd,
+            "READ_ID"   :self.read_uid_cmd  ,
+            "SET_TAG"   :self.set_tag_cmd   ,
+            "CLEAR_TAG" :self.clear_tag_cmd ,
+            "BEEP1"     :self.beep_1_cmd    ,
+            "BEEP3"     :self.beep_3_cmd
+        }
+
         self.tag1_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
         self.tag_status_list.append(self.tag1_status)
         self.tag2_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
@@ -119,57 +146,27 @@ class mesh_status():
             self.mesh_status = MESH_MOVE_OVER
             return self.mesh_status
 
-logging.basicConfig ( # 配置日志输出的方式及格式
-    level = logging.DEBUG,
-    filename = log_name,
-    filemode = 'a',
-    format = u'【%(asctime)s】 %(message)s',
-)
-
-class s_cmd_mechine(QObject):
-    def __init__(self,led_dict,parent=None):
-        super(s_cmd_mechine, self).__init__(parent)
-        self.led_dict       = led_dict
-        self.set_tag_count  = 0
-        self.mesh_s         = mesh_status()
-        self.connect_cmd    = "5A 02 0D 01 0E CA"
-        self.disconnect_cmd = "5A 02 CC 01 CF CA"
-        self.read_uid_cmd   = "5A 03 55 49 44 5B CA"
-        self.set_tag_cmd    = "5A 09 06 0F 42 40 17 06 09 01 01 1A CA"
-        self.clear_tag_cmd  = "5A 04 00 00 3D 01 38 CA"
-        self.beep_1_cmd     = "5A 01 01 00 CA"
-        self.beep_3_cmd     = "5A 01 02 03 CA"
-        self.cmd_dict       = {
-            "connect"   :self.connect_cmd   ,
-            "disconnect":self.disconnect_cmd,
-            "read_uid"  :self.read_uid_cmd  ,
-            "set_tag"   :self.set_tag_cmd   ,
-            "clear_tag" :self.clear_tag_cmd ,
-            "beep_1"    :self.beep_1_cmd    ,
-            "beep_3"    :self.beep_3_cmd
-        }
-
     def get_cmd(self):
         self.emit(SIGNAL('sn_update(int,int,int,int)'),
-            self.mesh_s.tag_status[0],self.mesh_s.tag_status[1],
-            self.mesh_s.tag_status[2],self.mesh_s.tag_status[3])
+            self.tag_status[0],self.tag_status[1],
+            self.tag_status[2],self.tag_status[3])
 
         send_cmd_name = None
 
-        mesh_status = self.mesh_s.get_mesh_status()
+        mesh_status = self.get_mesh_status()
 
         if mesh_status == MESH_IDLE     or mesh_status == MESH_MOVE_IN or \
            mesh_status == MESH_MOVE_OUT or mesh_status == MESH_MOVE_OVER:
-            send_cmd_name = "read_uid"
+            send_cmd_name = "READ_ID"
 
         if mesh_status == MESH_SET_TAG :
-            send_cmd_name = "set_tag"
+            send_cmd_name = "SET_TAG"
 
         if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL :
-            send_cmd_name = "beep_1"
+            send_cmd_name = "BEEP1"
 
         if mesh_status == MESH_CHECK_SHOW :
-            send_cmd_name = "beep_3"
+            send_cmd_name = "BEEP3"
 
         if send_cmd_name:
             return send_cmd_name,self.cmd_dict[send_cmd_name]
@@ -178,19 +175,13 @@ class s_cmd_mechine(QObject):
 
 class ComWork(QDialog):
     def __init__(self,parent=None):
-        global ser
         super(ComWork,self).__init__(parent)
-
-        self.config = ConfigParser.ConfigParser()
-        self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
-        self.config.readfp(open(self.config_file_name, "rb"))
-
-        input_count       = 0
         self.ser_list     = []
         self.monitor_dict = {}
-        self.led_dict     = {}
-        self.ser        = None
-        self.ComMonitor = None
+        self.ser          = None
+        self.ComMonitor   = None
+        self.mesh_s       = MeshStatus()
+
         self.setWindowTitle(u"滤网RFID生产")
         self.showMaximized()
 
@@ -203,46 +194,17 @@ class ComWork(QDialog):
         self.config = ConfigParser.ConfigParser()
         self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
         self.config.readfp(open(self.config_file_name, "rb"))
+        self.config = ConfigParser.ConfigParser()
+        self.config_file_name = os.path.abspath("./") + '\\data\\' + '\\config\\' + 'config.inf'
+        self.config.readfp(open(self.config_file_name, "rb"))
 
         self.conf_frame = sn_ui( 16,1,self.config, self.config_file_name )
         self.config_data_update()
-
-        self.com1_lable = QLabel(u"标签1")
-        self.com1_lable.setAlignment(Qt.AlignCenter)
-        self.com1_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.led1  = LED(60)
-        self.led_dict[1] = self.led1
-        self.com2_lable = QLabel(u"标签2")
-        self.com2_lable.setAlignment(Qt.AlignCenter)
-        self.com2_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.led2  = LED(60)
-        self.led_dict[2] = self.led2
-        self.com3_lable = QLabel(u"标签3")
-        self.com3_lable.setAlignment(Qt.AlignCenter)
-        self.com3_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.led3  = LED(60)
-        self.led_dict[3] = self.led3
-        self.com4_lable = QLabel(u"标签4")
-        self.com4_lable.setAlignment(Qt.AlignCenter)
-        self.com4_lable.setFont(QFont("Roman times",CONF_FONT_SIZE,QFont.Bold))
-        self.led4  = LED(60)
-        self.led_dict[4] = self.led4
-        self.send_cmd_machine = s_cmd_mechine(self.led_dict)
-        c_gbox = QGridLayout()
-
-        c_gbox.addWidget(self.led1      ,0,0)
-        c_gbox.addWidget(self.led2      ,0,1)
-        c_gbox.addWidget(self.led3      ,0,2)
-        c_gbox.addWidget(self.led4      ,0,3)
-        c_gbox.addWidget(self.com1_lable,1,0)
-        c_gbox.addWidget(self.com2_lable,1,1)
-        c_gbox.addWidget(self.com3_lable,1,2)
-        c_gbox.addWidget(self.com4_lable,1,3)
+        self.tag_frame  = tag_ui( self.config, self.config_file_name )
 
         self.sw_label   = QLabel(u"滤网RFID标签授权")
         self.sw_label.setFont(QFont("Roman times",40,QFont.Bold))
         self.sw_label.setAlignment(Qt.AlignCenter)
-
         self.zkxl_label = QLabel(u"版权所有：深圳中科讯联科技股份有限公司")
         self.zkxl_label.setFont(QFont("Roman times",20,QFont.Bold))
         self.zkxl_label.setAlignment(Qt.AlignCenter)
@@ -253,7 +215,7 @@ class ComWork(QDialog):
         box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
         box.addWidget(self.conf_frame)
         box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
-        box.addLayout(c_gbox)
+        box.addWidget(self.tag_frame)
         box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
         box.addLayout(e_layout)
         box.addItem(QSpacerItem(30,30,QSizePolicy.Expanding,QSizePolicy.Minimum))
@@ -262,10 +224,8 @@ class ComWork(QDialog):
 
         self.setLayout(box)
 
-        self.led_status_sync()
-
         self.e_button.clicked.connect(self.clear_text)
-        self.connect(self.send_cmd_machine,SIGNAL('sn_update(int,int,int,int)'),self.update_result )
+        self.connect(self.mesh_s,SIGNAL('sn_update(int,int,int,int)'),self.update_result )
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
@@ -274,8 +234,17 @@ class ComWork(QDialog):
     def update_result(self,status1,status2,status3,status4):
         status = [status1,status2,status3 ,status4]
 
-        mesh_status = self.send_cmd_machine.mesh_s.get_mesh_status()
+        mesh_status = self.mesh_s.get_mesh_status()
         print mesh_status,status
+        logging.debug( u"MESH:%d TAG:[%d %d %d %d]" % (mesh_status,status[0],status[1],status[2],status[3]) )
+
+        # 空闲状态显示
+        if mesh_status == MESH_IDLE :
+            i = 0
+            for item in status:
+                self.tag_frame.tag.led_list[i].set_color('gray')
+                i = i + 1
+            return
 
         # 设置卡片 FAIL
         if mesh_status == MESH_SET_FAIL or mesh_status == MESH_SET_OK :
@@ -287,9 +256,10 @@ class ComWork(QDialog):
             i = 0
             for item in status:
                 if status[i] == TAG_SET_FAIL:
-                    self.led_dict[i+1].set_color('red')
+                    self.tag_frame.tag.led_list[i].set_color('red')
                 if status[i] == TAG_SET_OK:
-                    self.led_dict[i+1].set_color('green')
+                    self.tag_frame.tag.led_list[i].set_color('green')
+                i = i + 1
             return
 
         # 重复烧录显示
@@ -297,9 +267,9 @@ class ComWork(QDialog):
             i = 0
             for item in status:
                 if status[i] == TAG_CHECK_OK:
-                    self.led_dict[i+1].set_color('green')
-                else：
-                    self.led_dict[i+1].set_color('red')
+                    self.tag_frame.tag.led_list[i].set_color('green')
+                else:
+                    self.tag_frame.tag.led_list[i].set_color('red')
                 i = i + 1
             return
 
@@ -308,7 +278,7 @@ class ComWork(QDialog):
             i = 0
             for item in status:
                 if status[i] == TAG_MOVE_IN :
-                    self.led_dict[i+1].set_color('blue')
+                    self.tag_frame.tag.led_list[i].set_color('blue')
                 i = i + 1
             return
 
@@ -317,17 +287,17 @@ class ComWork(QDialog):
             i = 0
             for item in status:
                 if status[i] == TAG_MOVE_OVER :
-                    self.led_dict[i+1].set_color('gray')
+                    self.tag_frame.tag.led_list[i].set_color('gray')
                 i = i + 1
             return
 
     def uart_auto_send_script(self):
-        mesh_status = self.send_cmd_machine.mesh_s.mesh_status
+        mesh_status = self.mesh_s.mesh_status
 
-        cmd_name,send_cmd = self.send_cmd_machine.get_cmd()
-        print cmd_name,send_cmd,
+        cmd_name,send_cmd = self.mesh_s.get_cmd()
+        print cmd_name,send_cmd
+        logging.debug( u"%s: %s" % (cmd_name,send_cmd) )
 
-        logging.debug( "%s" % cmd_name )
         send_cmd = send_cmd.replace(' ','')
         send_cmd = send_cmd.decode("hex")
 
@@ -341,8 +311,8 @@ class ComWork(QDialog):
             for item in self.ser_list:
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
-                        if self.send_cmd_machine.mesh_s.tag_status[i] == TAG_MOVE_IN or \
-                           self.send_cmd_machine.mesh_s.tag_status[i] == TAG_SET_TAG:
+                        if self.mesh_s.tag_status[i] == TAG_MOVE_IN or \
+                           self.mesh_s.tag_status[i] == TAG_SET_TAG:
                             self.monitor_dict[item].com.write(send_cmd)
                 i = i + 1
             return
@@ -352,7 +322,7 @@ class ComWork(QDialog):
             for item in self.ser_list:
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
-                        if self.send_cmd_machine.mesh_s.tag_status[i] == TAG_IDLE:
+                        if self.mesh_s.tag_status[i] == TAG_IDLE:
                             self.monitor_dict[item].com.write(send_cmd)
                 i = i + 1
             return
@@ -362,7 +332,7 @@ class ComWork(QDialog):
             for item in self.ser_list:
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
-                        if self.send_cmd_machine.mesh_s.tag_status[i] == TAG_MOVE_OUT:
+                        if self.mesh_s.tag_status[i] == TAG_MOVE_OUT:
                             if send_cmd:
                                 self.monitor_dict[item].com.write(send_cmd)
                 i = i + 1
@@ -377,13 +347,14 @@ class ComWork(QDialog):
                 i = i + 1
             return
 
-        if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL or mesh_status == MESH_CHECK_SHOW:
+        if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL  or \
+           mesh_status == MESH_CHECK_SHOW:
             i = 0
             for item in self.ser_list:
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
                             self.monitor_dict[item].com.write(send_cmd)
-                self.send_cmd_machine.mesh_s.update_tag_status(i,TAG_MOVE_OUT)
+                self.mesh_s.update_tag_status(i,TAG_MOVE_OUT)
                 i = i + 1
             return
 
@@ -391,7 +362,7 @@ class ComWork(QDialog):
         port = str(port)
         data = str(data)
 
-        mesh_status = self.send_cmd_machine.mesh_s.mesh_status
+        mesh_status = self.mesh_s.mesh_status
 
         log_str = u"[%s]: %s " % (port,data)
         print log_str,
@@ -407,27 +378,29 @@ class ComWork(QDialog):
         if data[2:4] == '06': # 读取UID指令
             # print data[4:12]
             if data[4:12] == '00000000':
-                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or mesh_status == MESH_MOVE_OVER:
+                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or \
+                mesh_status == MESH_MOVE_OVER:
                     result_str = u"读取UID FAIL"
-                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_IDLE)
+                    self.mesh_s.update_tag_status(ser_index-1,TAG_IDLE)
                 if mesh_status == MESH_MOVE_OUT:
                     result_str =u"匹配UID FIAL！标签移开"
-                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_OVER)
+                    self.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_OVER)
             else:
-                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or mesh_status == MESH_MOVE_OVER:
-                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_IN)
+                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or \
+                   mesh_status == MESH_MOVE_OVER:
+                    self.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_IN)
                     result_str = u"读取UID OK，记录UID！"
                 if mesh_status == MESH_MOVE_OUT:
-                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_OUT)
+                    self.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_OUT)
                     result_str = u"匹配UID OK！标签未移开"
 
         if data[2:4] == '0D':
             if data[4:30] == self.conf_frame.sn.get_tag():
                 result_str = u"验证标签TAG OK"
-                self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_CHECK_OK)
+                self.mesh_s.update_tag_status(ser_index-1,TAG_CHECK_OK)
             else:
                 result_str = u"验证标签TAG FAIL"
-                self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_CHECK_FAIL)
+                self.mesh_s.update_tag_status(ser_index-1,TAG_CHECK_FAIL)
 
         # 解析其他结果的返回
         if data[2:4] == '02':
@@ -438,13 +411,13 @@ class ComWork(QDialog):
             if data[4:8] == 'CC01': # 关闭串口OK
                 result_str = u"关闭串口OK"
             if data[4:8] == '2D01': # 设置标签TAG OK
-                self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_SET_OK)
+                self.mesh_s.update_tag_status(ser_index-1,TAG_SET_OK)
                 result_str = u"设置标签TAG OK"
             if data[4:8] == '2D04': # 设置标签TAG FAIL
-                self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_SET_TAG)
-                self.send_cmd_machine.set_tag_count = self.send_cmd_machine.set_tag_count + 1
-                if self.send_cmd_machine.set_tag_count >= 5:
-                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_SET_FAIL)
+                self.mesh_s.update_tag_status(ser_index-1,TAG_SET_TAG)
+                self.set_tag_count = self.set_tag_count + 1
+                if self.set_tag_count >= 3:
+                    self.mesh_s.update_tag_status(ser_index-1,TAG_SET_FAIL)
                     self.set_tag_count = 0
                 result_str = u"设置标签TAG FAIL"
         print result_str
@@ -478,21 +451,6 @@ class ComWork(QDialog):
         line_str = str(self.conf_frame.line_type_combo.currentText())
         self.conf_frame.sn.machine = line_str
 
-    def led_status_sync(self):
-        index = 0
-        for item in self.ser_list:
-            index = index + 1
-            if self.monitor_dict.has_key(item):
-                if self.monitor_dict[item].com.isOpen() == True:
-                    if index == 1:
-                        self.led1.set_color("green")
-                    if index == 2:
-                        self.led2.set_color("green")
-                    if index == 3:
-                        self.led3.set_color("green")
-                    if index == 4:
-                        self.led4.set_color("green")
-
     def config_data_update(self):
         port1 = self.config.get('serial', 'port1' )
         port2 = self.config.get('serial', 'port2' )
@@ -502,8 +460,6 @@ class ComWork(QDialog):
         self.ser_list.append(port2)
         self.ser_list.append(port3)
         self.ser_list.append(port4)
-
-        print self.ser_list
 
         for item in self.ser_list:
             ser = None
@@ -526,8 +482,7 @@ class ComWork(QDialog):
         self.conf_frame.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
         self.conf_frame.sn.mesh    = self.config.get('SN', 'mesh'    )
         self.conf_frame.sn.factory = self.config.get('SN', 'factory' )
-        self.conf_frame.sn.ccm = self.config.get('SN', 'ccm' )
-        print self.conf_frame.sn
+        self.conf_frame.sn.ccm     = self.config.get('SN', 'ccm' )
         self.conf_frame.manufacturer_lineedit.setText(self.conf_frame.sn.factory)
         self.conf_frame.line_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.machine)-1)
         self.conf_frame.mesh_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.mesh)-1)
