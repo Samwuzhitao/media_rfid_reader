@@ -26,6 +26,99 @@ log_time      = time.strftime( LOGTIMEFORMAT,time.localtime(time.time()))
 log_name      = "log-%s.txt" % log_time
 CONF_FONT_SIZE = 16
 
+MESH_IDLE       = 0
+MESH_MOVE_IN    = 1
+MESH_SET_TAG    = 2
+MESH_SET_OK     = 3
+MESH_SET_FAIL   = 4
+MESH_CHECK_SHOW = 5
+MESH_MOVE_OUT   = 6
+MESH_MOVE_OVER  = 7
+
+TAG_IDLE       = 0
+TAG_MOVE_IN    = 1
+TAG_SET_TAG    = 2
+TAG_SET_OK     = 3
+TAG_SET_FAIL   = 4
+TAG_CHECK_OK   = 5
+TAG_CHECK_FAIL = 6
+TAG_MOVE_OUT   = 7
+TAG_MOVE_OVER  = 8
+
+class mesh_status():
+    def __init__(self):
+        self.mesh_status = MESH_IDLE
+        self.tag_status_list = []
+        self.tag_index_list  = [0,0,0,0]
+        self.tag1_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
+        self.tag_status_list.append(self.tag1_status)
+        self.tag2_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
+        self.tag_status_list.append(self.tag2_status)
+        self.tag3_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
+        self.tag_status_list.append(self.tag3_status)
+        self.tag4_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
+        self.tag_status_list.append(self.tag4_status)
+        self.tag_status = [TAG_IDLE,TAG_IDLE,TAG_IDLE,TAG_IDLE]
+
+    def update_tag_status(self,tag_index,new_status):
+        # 滤网移动时的状态滤波处理
+        if self.mesh_status == MESH_MOVE_OUT:
+            self.tag_index_list[tag_index] = (self.tag_index_list[tag_index] + 1) % 3
+            self.tag_status_list[tag_index][self.tag_index_list[tag_index]] = new_status
+            self.tag_status[tag_index] = (self.tag_status_list[tag_index][self.tag_index_list[tag_index]] + \
+                            self.tag_status_list[tag_index][(self.tag_index_list[tag_index] + 3 - 1) % 3] + \
+                            self.tag_status_list[tag_index][(self.tag_index_list[tag_index] + 3 - 2) % 3]) / 3
+        else:
+            self.tag_status[tag_index] = new_status
+
+    def get_max_min_tag_status(self):
+        max_status = self.tag_status[0]
+        min_status = self.tag_status[0]
+        for item in self.tag_status:
+            if max_status < item:
+                max_status = item
+            if min_status > item:
+                min_status = item
+        return max_status,min_status
+
+    def get_mesh_status(self):
+        max_s,min_s = self.get_max_min_tag_status()
+        if max_s == TAG_IDLE:
+            self.mesh_status = MESH_IDLE
+            return self.mesh_status
+
+        if max_s == TAG_MOVE_IN and min_s == TAG_IDLE:
+            self.mesh_status = MESH_MOVE_IN
+            return self.mesh_status
+
+        if max_s == TAG_MOVE_IN and min_s == TAG_MOVE_IN:
+            self.mesh_status = MESH_SET_TAG
+            return self.mesh_status
+
+        if min_s == TAG_SET_TAG:
+            self.mesh_status = MESH_SET_TAG
+            return self.mesh_status
+
+        if  max_s == TAG_SET_OK and min_s == TAG_SET_OK:
+            self.mesh_status = MESH_SET_OK
+            return self.mesh_status
+
+        if  max_s == TAG_SET_FAIL :
+            self.mesh_status = MESH_SET_FIAL
+            return self.mesh_status
+
+        if  max_s == TAG_CHECK_FAIL or min_s == TAG_CHECK_OK:
+            self.mesh_status = MESH_CHECK_SHOW
+            return self.mesh_status
+
+        if  min_s == TAG_MOVE_OUT:
+            self.mesh_status = MESH_MOVE_OUT
+            return self.mesh_status
+
+        if  min_s == TAG_MOVE_OVER:
+            self.mesh_status = MESH_MOVE_OVER
+            return self.mesh_status
+
 logging.basicConfig ( # 配置日志输出的方式及格式
     level = logging.DEBUG,
     filename = log_name,
@@ -37,35 +130,16 @@ class s_cmd_mechine(QObject):
     def __init__(self,led_dict,parent=None):
         super(s_cmd_mechine, self).__init__(parent)
         self.led_dict       = led_dict
-        self.cmd_status     = [0,0,0,0]
-        self.old_cmd_status = [0,0,0,0]
-        self.tag_uid        = ['','','','']
-        self.write_tag_cmd_count = 0
-        self.write_tag_start_flag  = 0
-        self.connect_cmd = "5A 02 0D 01 0E CA"
-        self.connect_cmd = self.connect_cmd.replace(' ','')
-        self.connect_cmd = self.connect_cmd.decode("hex")
+        self.set_tag_count  = 0
+        self.mesh_s         = mesh_status()
+        self.connect_cmd    = "5A 02 0D 01 0E CA"
         self.disconnect_cmd = "5A 02 CC 01 CF CA"
-        self.disconnect_cmd = self.disconnect_cmd.replace(' ','')
-        self.disconnect_cmd = self.disconnect_cmd.decode("hex")
-        self.read_uid_cmd = "5A 03 55 49 44 5B CA"
-        self.read_uid_cmd = self.read_uid_cmd.replace(' ','')
-        self.read_uid_cmd = self.read_uid_cmd.decode("hex")
-        self.set_tag_cmd  = "5A 09 06 0F 42 40 17 06 09 01 01 1A CA"
-        self.set_tag_cmd  = self.set_tag_cmd.replace(' ','')
-        self.set_tag_cmd  = self.set_tag_cmd.decode("hex")
+        self.read_uid_cmd   = "5A 03 55 49 44 5B CA"
+        self.set_tag_cmd    = "5A 09 06 0F 42 40 17 06 09 01 01 1A CA"
         self.clear_tag_cmd  = "5A 04 00 00 3D 01 38 CA"
-        self.clear_tag_cmd  = self.clear_tag_cmd.replace(' ','')
-        self.clear_tag_cmd  = self.clear_tag_cmd.decode("hex")
-        self.beep_1_cmd  = "5A 01 01 00 CA"
-        # self.beep_1_cmd  = "5A 01 01 01 CA"
-        self.beep_1_cmd  = self.beep_1_cmd.replace(' ','')
-        self.beep_1_cmd  = self.beep_1_cmd.decode("hex")
-        self.beep_3_cmd  = "5A 01 02 03 CA"
-        self.beep_3_cmd  = self.beep_3_cmd.replace(' ','')
-        self.beep_3_cmd  = self.beep_3_cmd.decode("hex")
-
-        self.cmd_dict    = {
+        self.beep_1_cmd     = "5A 01 01 00 CA"
+        self.beep_3_cmd     = "5A 01 02 03 CA"
+        self.cmd_dict       = {
             "connect"   :self.connect_cmd   ,
             "disconnect":self.disconnect_cmd,
             "read_uid"  :self.read_uid_cmd  ,
@@ -75,51 +149,27 @@ class s_cmd_mechine(QObject):
             "beep_3"    :self.beep_3_cmd
         }
 
-    def get_cmd_status(self):
-        max_cmd_status = self.cmd_status[0]
-        min_cmd_status = self.cmd_status[0]
-        for item in self.cmd_status:
-            if max_cmd_status < item:
-                max_cmd_status = item
-            if min_cmd_status > item:
-                min_cmd_status = item
-        return max_cmd_status,min_cmd_status
-
     def get_cmd(self):
         self.emit(SIGNAL('sn_update(int,int,int,int)'),
-            self.cmd_status[0],self.cmd_status[1],self.cmd_status[2],self.cmd_status[3])
+            self.mesh_s.tag_status[0],self.mesh_s.tag_status[1],
+            self.mesh_s.tag_status[2],self.mesh_s.tag_status[3])
+
         send_cmd_name = None
 
-        max_status,min_status = self.get_cmd_status()
+        mesh_status = self.mesh_s.get_mesh_status()
 
-        if max_status == 2 and min_status == 2:
+        if mesh_status == MESH_IDLE     or mesh_status == MESH_MOVE_IN or \
+           mesh_status == MESH_MOVE_OUT or mesh_status == MESH_MOVE_OVER:
             send_cmd_name = "read_uid"
-            return send_cmd_name,self.cmd_dict[send_cmd_name]
 
-        if max_status == 3 and min_status == 1:
-            send_cmd_name = "read_uid"
-            return send_cmd_name,self.cmd_dict[send_cmd_name]
-
-        if min_status == 1:
+        if mesh_status == MESH_SET_TAG :
             send_cmd_name = "set_tag"
-            if self.write_tag_start_flag == 0:
-                self.write_tag_cmd_count = 0
-                self.write_tag_start_flag = 1
-            else:
-                self.write_tag_cmd_count = self.write_tag_cmd_count + 1
-                if self.write_tag_cmd_count >= 5:
-                    self.write_tag_cmd_count = 0
-                    self.write_tag_start_flag = 0
 
-            return send_cmd_name,self.cmd_dict[send_cmd_name]
+        if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL :
+            send_cmd_name = "beep_1"
 
-        if min_status == 0:
-            send_cmd_name = "read_uid"
-            return send_cmd_name,self.cmd_dict[send_cmd_name]
-
-        if min_status == 2 or min_status == 3:
-            send_cmd_name = "read_uid"
-            return send_cmd_name,self.cmd_dict[send_cmd_name]
+        if mesh_status == MESH_CHECK_SHOW :
+            send_cmd_name = "beep_3"
 
         if send_cmd_name:
             return send_cmd_name,self.cmd_dict[send_cmd_name]
@@ -219,81 +269,130 @@ class ComWork(QDialog):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
-        self.timer.start(600)
+        self.timer.start(500)
 
     def update_result(self,status1,status2,status3,status4):
         status = [status1,status2,status3 ,status4]
 
-        i = 0
-        max_status,min_status = self.send_cmd_machine.get_cmd_status()
+        mesh_status = self.send_cmd_machine.mesh_s.get_mesh_status()
+        print mesh_status,status
 
-        if max_status == 0:
-            self.send_cmd_machine.write_tag_start_flag = 0
-
-        if max_status == 3:
-            self.send_cmd_machine.write_tag_start_flag = 0
-
-        if max_status == 2 and min_status == 2:
-            for item in self.led_dict:
-                i = i + 1
-                self.led_dict[i].set_color("green")
-            self.conf_frame.sn.number = self.conf_frame.sn.number + 1
-            self.sync_sn_str()
-            self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
+        # 设置卡片 FAIL
+        if mesh_status == MESH_SET_FAIL or mesh_status == MESH_SET_OK :
+            if mesh_status == MESH_SET_OK :
+                # 序列号增加
+                self.conf_frame.sn.number = self.conf_frame.sn.number + 1
+                self.sync_sn_str()
+                self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
             i = 0
-            for item in self.ser_list:
-                if self.monitor_dict.has_key(item):
-                    if self.monitor_dict[item].com.isOpen() == True:
-                        self.monitor_dict[item].com.write(self.send_cmd_machine.cmd_dict["beep_1"])
+            for item in status:
+                if status[i] == TAG_SET_FAIL:
+                    self.led_dict[i+1].set_color('red')
+                if status[i] == TAG_SET_OK:
+                    self.led_dict[i+1].set_color('green')
+            return
+
+        # 重复烧录显示
+        if mesh_status == MESH_CHECK_SHOW :
+            i = 0
+            for item in status:
+                if status[i] == TAG_CHECK_OK:
+                    self.led_dict[i+1].set_color('green')
+                else：
+                    self.led_dict[i+1].set_color('red')
                 i = i + 1
-        else:
-            if self.send_cmd_machine.write_tag_start_flag == 0:
-                i = 0
-                for item in status:
-                    if status[i] == 3:
-                        self.led_dict[i+1].set_color('red')
-                    if status[i] == 2:
-                        self.led_dict[i+1].set_color('green')
-                    if status[i] == 1:
-                        self.led_dict[i+1].set_color('blue')
-                    if status[i] == 0:
-                        self.led_dict[i+1].set_color('gray')
-                    i = i + 1
+            return
+
+        # 移入显示
+        if mesh_status == MESH_MOVE_IN :
+            i = 0
+            for item in status:
+                if status[i] == TAG_MOVE_IN :
+                    self.led_dict[i+1].set_color('blue')
+                i = i + 1
+            return
+
+        # 移出显示
+        if mesh_status == MESH_MOVE_OUT or mesh_status == MESH_MOVE_OVER:
+            i = 0
+            for item in status:
+                if status[i] == TAG_MOVE_OVER :
+                    self.led_dict[i+1].set_color('gray')
+                i = i + 1
+            return
 
     def uart_auto_send_script(self):
-        max_status,min_status = self.send_cmd_machine.get_cmd_status()
-        cmd_status_str = 'status: [ %d %d %d %d] cmd: ' % \
-           (self.send_cmd_machine.cmd_status[0],self.send_cmd_machine.cmd_status[1],
-            self.send_cmd_machine.cmd_status[2],self.send_cmd_machine.cmd_status[3])
+        mesh_status = self.send_cmd_machine.mesh_s.mesh_status
 
         cmd_name,send_cmd = self.send_cmd_machine.get_cmd()
-        cmd_status_str = cmd_status_str + cmd_name
-        print cmd_status_str
+        print cmd_name,send_cmd,
 
-        logging.debug( "%s" % cmd_status_str )
+        logging.debug( "%s" % cmd_name )
+        send_cmd = send_cmd.replace(' ','')
+        send_cmd = send_cmd.decode("hex")
 
-        if send_cmd == self.send_cmd_machine.set_tag_cmd:
+        if mesh_status == MESH_SET_TAG:
             send_cmd =  self.conf_frame.sn.get_tag_cmd()
             print "TAG_CMD = " + send_cmd
             logging.debug( u"TAG_CMD = %s" % send_cmd )
             send_cmd = send_cmd.decode("hex")
 
-        i = 0
-        for item in self.ser_list:
-            if self.monitor_dict.has_key(item):
-                if self.monitor_dict[item].com.isOpen() == True:
-                    if send_cmd:
-                        if max_status != 3:
-                            if self.send_cmd_machine.cmd_status[i] == min_status:
-                                self.monitor_dict[item].com.write(send_cmd)
-                        else:
+            i = 0
+            for item in self.ser_list:
+                if self.monitor_dict.has_key(item):
+                    if self.monitor_dict[item].com.isOpen() == True:
+                        if self.send_cmd_machine.mesh_s.tag_status[i] == TAG_MOVE_IN or \
+                           self.send_cmd_machine.mesh_s.tag_status[i] == TAG_SET_TAG:
                             self.monitor_dict[item].com.write(send_cmd)
-            i = i + 1
+                i = i + 1
+            return
+
+        if mesh_status == MESH_MOVE_IN or mesh_status == MESH_MOVE_OVER :
+            i = 0
+            for item in self.ser_list:
+                if self.monitor_dict.has_key(item):
+                    if self.monitor_dict[item].com.isOpen() == True:
+                        if self.send_cmd_machine.mesh_s.tag_status[i] == TAG_IDLE:
+                            self.monitor_dict[item].com.write(send_cmd)
+                i = i + 1
+            return
+
+        if mesh_status == MESH_MOVE_OUT:
+            i = 0
+            for item in self.ser_list:
+                if self.monitor_dict.has_key(item):
+                    if self.monitor_dict[item].com.isOpen() == True:
+                        if self.send_cmd_machine.mesh_s.tag_status[i] == TAG_MOVE_OUT:
+                            if send_cmd:
+                                self.monitor_dict[item].com.write(send_cmd)
+                i = i + 1
+            return
+
+        if mesh_status == MESH_IDLE:
+            i = 0
+            for item in self.ser_list:
+                if self.monitor_dict.has_key(item):
+                    if self.monitor_dict[item].com.isOpen() == True:
+                            self.monitor_dict[item].com.write(send_cmd)
+                i = i + 1
+            return
+
+        if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL or mesh_status == MESH_CHECK_SHOW:
+            i = 0
+            for item in self.ser_list:
+                if self.monitor_dict.has_key(item):
+                    if self.monitor_dict[item].com.isOpen() == True:
+                            self.monitor_dict[item].com.write(send_cmd)
+                self.send_cmd_machine.mesh_s.update_tag_status(i,TAG_MOVE_OUT)
+                i = i + 1
+            return
 
     def uart_cmd_decode(self,port,data):
         port = str(port)
         data = str(data)
-        # print port,data,
+
+        mesh_status = self.send_cmd_machine.mesh_s.mesh_status
+
         log_str = u"[%s]: %s " % (port,data)
         print log_str,
 
@@ -308,32 +407,27 @@ class ComWork(QDialog):
         if data[2:4] == '06': # 读取UID指令
             # print data[4:12]
             if data[4:12] == '00000000':
-                self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
-                self.send_cmd_machine.cmd_status[ser_index-1] = 0
-                if self.send_cmd_machine.old_cmd_status[ser_index-1] == 0:
+                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or mesh_status == MESH_MOVE_OVER:
                     result_str = u"读取UID FAIL"
-                else:
+                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_IDLE)
+                if mesh_status == MESH_MOVE_OUT:
                     result_str =u"匹配UID FIAL！标签移开"
+                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_OVER)
             else:
-                self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
-                self.send_cmd_machine.cmd_status[ser_index-1] = 1
-                if self.send_cmd_machine.old_cmd_status[ser_index-1] == 0:
-                    self.send_cmd_machine.tag_uid[ser_index-1] = data[4:12]
+                if mesh_status == MESH_IDLE or mesh_status == MESH_MOVE_IN or mesh_status == MESH_MOVE_OVER:
+                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_IN)
                     result_str = u"读取UID OK，记录UID！"
-                else:
-                    if self.send_cmd_machine.tag_uid[ser_index-1] == data[4:12]:
-                        self.send_cmd_machine.cmd_status[ser_index-1] = 3
+                if mesh_status == MESH_MOVE_OUT:
+                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_MOVE_OUT)
                     result_str = u"匹配UID OK！标签未移开"
 
         if data[2:4] == '0D':
-            # print "WRITE_TAG = %s CHECK_TAG = %s" % (self.conf_frame.sn.get_tag(),data[4:30])
-            self.send_cmd_machine.old_cmd_status[ser_index-1] = self.send_cmd_machine.cmd_status[ser_index-1]
             if data[4:30] == self.conf_frame.sn.get_tag():
                 result_str = u"验证标签TAG OK"
-                self.send_cmd_machine.cmd_status[ser_index-1] = 2
+                self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_CHECK_OK)
             else:
                 result_str = u"验证标签TAG FAIL"
-                self.send_cmd_machine.cmd_status[ser_index-1] = 3
+                self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_CHECK_FAIL)
 
         # 解析其他结果的返回
         if data[2:4] == '02':
@@ -344,10 +438,14 @@ class ComWork(QDialog):
             if data[4:8] == 'CC01': # 关闭串口OK
                 result_str = u"关闭串口OK"
             if data[4:8] == '2D01': # 设置标签TAG OK
-                self.send_cmd_machine.cmd_status[ser_index-1] = 2
+                self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_SET_OK)
                 result_str = u"设置标签TAG OK"
             if data[4:8] == '2D04': # 设置标签TAG FAIL
-                self.send_cmd_machine.cmd_status[ser_index-1] = 1
+                self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_SET_TAG)
+                self.send_cmd_machine.set_tag_count = self.send_cmd_machine.set_tag_count + 1
+                if self.send_cmd_machine.set_tag_count >= 5:
+                    self.send_cmd_machine.mesh_s.update_tag_status(ser_index-1,TAG_SET_FAIL)
+                    self.set_tag_count = 0
                 result_str = u"设置标签TAG FAIL"
         print result_str
         logging.debug( u"%s %s" % (log_str,result_str) )
