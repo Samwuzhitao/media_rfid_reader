@@ -62,6 +62,7 @@ class MeshStatus(QObject):
         self.tag_status      = [TAG_IDLE,TAG_IDLE,TAG_IDLE,TAG_IDLE]
         # self.tag_old_status  = [TAG_IDLE,TAG_IDLE,TAG_IDLE,TAG_IDLE]
         self.set_tag_count  = 0
+        self.set_beep_count = 0
         self.connect_cmd    = "5A 02 0D 01 0E CA"
         self.disconnect_cmd = "5A 02 CC 01 CF CA"
         self.read_uid_cmd   = "5A 03 55 49 44 5B CA"
@@ -69,6 +70,9 @@ class MeshStatus(QObject):
         self.clear_tag_cmd  = "5A 04 00 00 3D 01 38 CA"
         self.beep_1_cmd     = "5A 01 01 00 CA"
         self.beep_3_cmd     = "5A 01 02 03 CA"
+        self.ack_cmd        = "5A 01 0A 0B CA"
+        self.ack_cmd        = self.ack_cmd.replace(' ','')
+        self.ack_cmd        = self.ack_cmd.decode("hex")
         self.cmd_dict       = {
             "CONNECT"   :self.connect_cmd   ,
             "DISCONNECT":self.disconnect_cmd,
@@ -76,7 +80,8 @@ class MeshStatus(QObject):
             "SET_TAG"   :self.set_tag_cmd   ,
             "CLEAR_TAG" :self.clear_tag_cmd ,
             "BEEP1"     :self.beep_1_cmd    ,
-            "BEEP3"     :self.beep_3_cmd
+            "BEEP3"     :self.beep_3_cmd    ,
+            "ACK"       :self.ack_cmd
         }
 
     def update_tag_status(self,tag_index,new_status):
@@ -333,26 +338,26 @@ class ComWork(QDialog):
 
         if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL  or \
            mesh_status == MESH_CHECK_SHOW:
-            self.mesh_s.set_tag_count = self.mesh_s.set_tag_count + 1
+            self.mesh_s.set_beep_count = self.mesh_s.set_beep_count + 1
             i = 0
-            if self.mesh_s.set_tag_count > 3:
+            if self.mesh_s.set_beep_count > 3:
                 for item in self.ser_list:
                     self.mesh_s.update_tag_status(i,TAG_MOVE_OUT)
                     i = i + 1
-                self.mesh_s.set_tag_count = 0
+                self.mesh_s.set_beep_count = 0
 
             i = 0
             for item in self.ser_list:
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
-                        if self.mesh_s.set_tag_count == 0:
+                        if self.mesh_s.set_beep_count == 0:
                             if send_cmd:
                                 self.monitor_dict[item].com.write(send_cmd)
                 i = i + 1
 
             if mesh_status == MESH_SET_OK :
                 # 序列号增加
-                if self.mesh_s.set_tag_count == 0:
+                if self.mesh_s.set_beep_count == 0:
                     self.conf_frame.sn.number = self.conf_frame.sn.number + 1
                     self.sync_sn_str()
                     self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
@@ -361,6 +366,11 @@ class ComWork(QDialog):
     def uart_cmd_decode(self,port,data):
         port = str(port)
         data = str(data)
+
+        # 回复ACK
+        if self.monitor_dict.has_key(port):
+            if self.monitor_dict[port].com.isOpen() == True:
+                self.monitor_dict[port].com.write(self.mesh_s.ack_cmd)
 
         mesh_status = self.mesh_s.mesh_status
 
@@ -462,7 +472,7 @@ class ComWork(QDialog):
         for item in self.ser_list:
             ser = None
             try:
-                ser = serial.Serial( item, 115200, timeout = 0.5)
+                ser = serial.Serial( item, 115200)
                 # s.close()
             except serial.SerialException:
                 pass
