@@ -20,13 +20,6 @@ from led            import *
 from sn_config      import *
 from tag_config     import *
 
-ser           = 0
-input_count   = 0
-LOGTIMEFORMAT = '%Y%m%d%H'
-log_time      = time.strftime( LOGTIMEFORMAT,time.localtime(time.time()))
-log_name      = "log-%s.txt" % log_time
-
-
 class ComSetting(QDialog):
     def __init__(self, parent=None):
         global ser
@@ -51,7 +44,6 @@ class ComSetting(QDialog):
         self.config.readfp(open(self.config_file_name, "rb"))
 
         self.conf_frame = sn_ui( 16,0,self.config, self.config_file_name )
-        self.conf_frame.sync_sn_update()
         self.tag_frame  = tag_ui( self.config, self.config_file_name )
 
         self.sw_label   = QLabel(u"滤网RFID标签授权")

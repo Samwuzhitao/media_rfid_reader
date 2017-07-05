@@ -5,11 +5,14 @@ port3 = COM41
 port4 = COM42
 
 [SN]
-date = 170704
-machine = 05
-number = 32
+date = 170705
+machine = 04
+number = 1
 mesh = 03
-sn = 07500020
-factory = 01
-ccm = 02
+sn = 07400001
+factory = 02
+ccm = 01
+
+[EXCEL]
+item = 5
 

@@ -11,6 +11,8 @@ import os
 import sys
 import logging
 import json
+import xlrd
+import xlwt
 from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
 import ConfigParser
@@ -31,7 +33,7 @@ logging.basicConfig ( # 配置日志输出的方式及格式
     level = logging.DEBUG,
     filename = log_name,
     filemode = 'a',
-    format = u'【%(asctime)s】 %(message)s',
+    format = u'[%(asctime)s] %(message)s',
 )
 
 MESH_IDLE       = 0
@@ -188,7 +190,6 @@ class ComWork(QDialog):
         self.config.readfp(open(self.config_file_name, "rb"))
 
         self.conf_frame = sn_ui( 16,1,self.config, self.config_file_name )
-        self.config_data_update()
         self.tag_frame  = tag_ui( self.config, self.config_file_name )
 
         self.sw_label   = QLabel(u"滤网RFID标签授权")
@@ -215,9 +216,52 @@ class ComWork(QDialog):
 
         self.e_button.clicked.connect(self.clear_text)
 
+        self.config_data_update()
+
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
         self.timer.start(500)
+
+    def export_excel_data(self):
+        save_time = time.strftime('%Y%m%d',time.localtime(time.time()))
+        self.excel_file = xlwt.Workbook()
+        self.excel_sheet = self.excel_file.add_sheet('sheet1',cell_overwrite_ok=True)
+        self.excel_sheet.write(0,0,u'时间')
+        self.excel_sheet.write(0,1,u"产线号")
+        self.excel_sheet.write(0,2,u"滤网类型")
+        self.excel_sheet.write(0,3,u"生产厂家")
+        self.excel_sheet.write(0,4,u"CCM值")
+        self.excel_sheet.write(0,5,u"SN")
+
+        for i in range(24):
+            log_file_name = os.path.abspath("./") + "\\log-%s%02d.txt" % (save_time,i)
+            is_file = 0
+            try:
+                f = open(log_file_name,'rU')
+                is_file = 1
+            except IOError:
+                pass
+
+            if is_file == 1:
+                print log_file_name
+                filelines  = f.readlines()
+
+                for item in filelines:
+                    if item[26+0:26+len('SN_DATA:')] == 'SN_DATA:':
+                        time_str = item[1:24]
+                        self.excel_sheet.write(self.conf_frame.sn.excel_item,0,time_str)        # u'时间
+                        data_str = item[26+len('SN_DATA:'):].replace(' ','')
+                        # print item
+                        # print data_str
+                        self.excel_sheet.write(self.conf_frame.sn.excel_item,1,data_str[0:2])   # u"产线号"
+                        self.excel_sheet.write(self.conf_frame.sn.excel_item,2,data_str[2:4])   # u"滤网类型"
+                        self.excel_sheet.write(self.conf_frame.sn.excel_item,3,data_str[4:6])   # u"生产厂家"
+                        self.excel_sheet.write(self.conf_frame.sn.excel_item,4,data_str[6:8])   # u"CCM值"
+                        self.excel_sheet.write(self.conf_frame.sn.excel_item,5,data_str[8:16])  # u"SN"
+                        self.conf_frame.sn.excel_item = self.conf_frame.sn.excel_item + 1
+                f.close()
+
+        self.excel_file.save('SN_DATA_%s.xls' % save_time)
 
     def update_led_status(self):
         status = self.mesh_s.tag_status
@@ -358,8 +402,13 @@ class ComWork(QDialog):
             if mesh_status == MESH_SET_OK :
                 # 序列号增加
                 if self.mesh_s.set_beep_count == 0:
+                    sn_log_str = ' %s' % self.conf_frame.sn.machine
+                    sn_log_str = sn_log_str + ' %s' % self.conf_frame.sn.mesh
+                    sn_log_str = sn_log_str + ' %s' % self.conf_frame.sn.factory
+                    sn_log_str = sn_log_str + ' %s' % self.conf_frame.sn.ccm
+                    sn_log_str = sn_log_str + ' %s' % self.conf_frame.sn.get_sn()
+                    logging.debug( u"SN_DATA:%s " % sn_log_str )
                     self.conf_frame.sn.number = self.conf_frame.sn.number + 1
-                    self.sync_sn_str()
                     self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
             return
 
@@ -375,6 +424,7 @@ class ComWork(QDialog):
         mesh_status = self.mesh_s.mesh_status
 
         log_str = u"[%s]: %s " % (port,data)
+        result_str = ''
         print log_str,
 
         # 获取当前串口对应的标签号
@@ -431,34 +481,6 @@ class ComWork(QDialog):
         print result_str
         logging.debug( u"%s %s" % (log_str,result_str) )
 
-    def sync_sn_str(self):
-        data_str = ''
-        mesh_str = unicode(self.conf_frame.mesh_type_combo.currentText())
-        if mesh_str == u'0x01:复合滤网\PM2.5滤网':
-            self.conf_frame.sn.mesh = '01'
-        if mesh_str == u'0x02:甲醛滤网':
-            self.conf_frame.sn.mesh = '02'
-        if mesh_str == u'0x03:塑料袋NFC标签':
-            self.conf_frame.sn.mesh = '03'
-        if mesh_str == u'0x04:非法滤网':
-            self.conf_frame.sn.mesh = '04'
-        if mesh_str == u'0xFF:没有标签':
-            self.conf_frame.sn.mesh = 'FF'
-
-        fac_str = str(self.conf_frame.manufacturer_lineedit.text())
-        fac_str = fac_str.replace('-','')
-        fac_str = fac_str.replace(' ','')
-        self.conf_frame.sn.factory = fac_str
-
-        time_str = str(self.conf_frame.time_lineedit.text())
-        time_str = time_str[2:]
-        time_str = time_str.replace('-','')
-        time_str = time_str.replace(' ','')
-        self.conf_frame.sn.date = time_str
-
-        line_str = str(self.conf_frame.line_type_combo.currentText())
-        self.conf_frame.sn.machine = line_str
-
     def config_data_update(self):
         port1 = self.config.get('serial', 'port1' )
         port2 = self.config.get('serial', 'port2' )
@@ -468,12 +490,11 @@ class ComWork(QDialog):
         self.ser_list.append(port2)
         self.ser_list.append(port3)
         self.ser_list.append(port4)
-
+        print self.ser_list
         for item in self.ser_list:
             ser = None
             try:
                 ser = serial.Serial( item, 115200)
-                # s.close()
             except serial.SerialException:
                 pass
             if ser:
@@ -491,21 +512,6 @@ class ComWork(QDialog):
         self.conf_frame.sn.mesh    = self.config.get('SN', 'mesh'    )
         self.conf_frame.sn.factory = self.config.get('SN', 'factory' )
         self.conf_frame.sn.ccm     = self.config.get('SN', 'ccm' )
-        self.conf_frame.manufacturer_lineedit.setText(self.conf_frame.sn.factory)
-        self.conf_frame.line_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.machine)-1)
-        self.conf_frame.mesh_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.mesh)-1)
-        self.conf_frame.ccm_type_combo.setCurrentIndex(string.atoi(self.conf_frame.sn.ccm)-1)
-        mesh_str = unicode(self.conf_frame.mesh_type_combo.currentText())
-        self.conf_frame.mesh_type_combo.clear()
-        self.conf_frame.mesh_type_combo.addItems([mesh_str])
-        ccm_str = unicode(self.conf_frame.ccm_type_combo.currentText())
-        self.conf_frame.ccm_type_combo.clear()
-        self.conf_frame.ccm_type_combo.addItems([ccm_str])
-        line_str = unicode(self.conf_frame.line_type_combo.currentText())
-        self.conf_frame.line_type_combo.clear()
-        self.conf_frame.line_type_combo.addItems([line_str])
-        self.sync_sn_str()
-        self.conf_frame.des_lineedit.setText(self.conf_frame.sn.get_sn())
 
     def clear_text(self):
         print "exit"
@@ -516,10 +522,15 @@ class ComWork(QDialog):
         comsetting_dialog = ComWork(parent)
         result = comsetting_dialog.exec_()
         comsetting_dialog.conf_frame.config_data_sync()
+        comsetting_dialog.export_excel_data()
         for item in comsetting_dialog.ser_list:
             if comsetting_dialog.monitor_dict.has_key(item):
                 comsetting_dialog.monitor_dict[item].com.close()
                 comsetting_dialog.monitor_dict[item].quit()
 
-
-
+if __name__=='__main__':
+    app = QApplication(sys.argv)
+    datburner = ComWork()
+    datburner.show()
+    datburner.export_excel_data()
+    app.exec_()
