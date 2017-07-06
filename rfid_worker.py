@@ -508,7 +508,6 @@ class ComWork(QDialog):
                 print u"创建串口监听线程! %s 失败，请检查设备是否接上或者更改变" % item
 
         self.conf_frame.sn.machine = self.config.get('SN', 'machine' )
-        self.conf_frame.sn.number  = string.atoi(self.config.get('SN', 'number'  ))
         self.conf_frame.sn.mesh    = self.config.get('SN', 'mesh'    )
         self.conf_frame.sn.factory = self.config.get('SN', 'factory' )
         self.conf_frame.sn.ccm     = self.config.get('SN', 'ccm' )

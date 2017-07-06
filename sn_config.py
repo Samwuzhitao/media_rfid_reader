@@ -66,7 +66,7 @@ class sn_ui(QFrame):
         self.line_label=QLabel(u"产线号  :")
         # self.line_lineedit = QLineEdit(u"01")
         self.line_type_combo = QComboBox()
-        self.line_type_combo.addItems([u'01',u'02',u'03',u'04',u'05',u'06',u'07',u'08',u'09',u'10'])
+        self.line_type_combo.addItems([u'01',u'02',u'03',u'04',u'05',u'06',u'07',u'08',u'09'])
 
         self.time_label=QLabel(u"生产日期:")
         self.manufacturer_label=QLabel(u"生产厂家:")
@@ -141,16 +141,19 @@ class sn_ui(QFrame):
     def sync_sn_update(self):
         self.sn.date    = self.config.get('SN', 'date'    )
         self.sn.machine = self.config.get('SN', 'machine' )
+        self.line_type_combo.setCurrentIndex(string.atoi(self.sn.machine)-1)
+        line_index = string.atoi(str(self.line_type_combo.currentText()),10)
 
-        if self.config.get('SN', 'number'  ) != '':
-            self.sn.number  = string.atoi(self.config.get('SN', 'number' ))
+        if self.sn.machine != '':
+            self.sn.sn      = self.config.get('SN', 'sn%d' % line_index )
+            print self.sn.sn
+            self.sn.number  = string.atoi(self.sn.sn[3:])
+            print self.sn.number
             self.sn.mesh    = self.config.get('SN', 'mesh'    )
-            self.sn.sn      = self.config.get('SN', 'sn'      )
             self.sn.factory = self.config.get('SN', 'factory' )
             self.sn.ccm     = self.config.get('SN', 'ccm'     )
 
             self.manufacturer_lineedit.setText(self.sn.factory)
-            self.line_type_combo.setCurrentIndex(string.atoi(self.sn.machine)-1)
             self.mesh_type_combo.setCurrentIndex(string.atoi(self.sn.mesh)-1)
             self.ccm_type_combo.setCurrentIndex(string.atoi(self.sn.ccm)-1)
 
@@ -182,12 +185,6 @@ class sn_ui(QFrame):
             new_data = '04'
         if mesh_str == u'0xFF:没有标签':
             new_data = 'FF'
-        print new_data,self.sn.mesh
-        if new_data != self.sn.mesh:
-            self.sn.number = 0
-            self.sn.mesh = new_data
-            self.des_lineedit.setText(self.sn.get_sn())
-            print "mesh clear"
 
     def ccm_change_sync(self):
         new_data = ''
@@ -196,22 +193,10 @@ class sn_ui(QFrame):
             new_data = '01'
         if ccm_str == u'0x02:40000':
             new_data = '02'
-        print new_data,self.sn.ccm
-        if new_data != self.sn.ccm:
-            self.sn.number = 0
-            self.sn.ccm = new_data
-            self.des_lineedit.setText(self.sn.get_sn())
-            print "ccm clear"
 
     def factory_change_sync(self):
         new_data = ''
         new_data = str(self.manufacturer_lineedit.text())
-        print new_data,self.sn.factory
-        if new_data != '' and new_data != self.sn.factory:
-            self.sn.factory = "%02X" % (string.atoi(new_data,10))
-            self.sn.number  = 0
-            self.des_lineedit.setText(self.sn.get_sn())
-            print "factory clear"
 
     def line_change_sync(self):
         new_data = ''
@@ -219,10 +204,11 @@ class sn_ui(QFrame):
         print new_data,self.sn.machine
         if new_data != self.sn.machine:
             self.sn.machine = new_data
-            self.sn.number= 0
+            line_index = string.atoi(str(self.line_type_combo.currentText()),10)
+            self.sn.sn      = self.config.get('SN', 'sn%d' % line_index )
+            self.sn.number  = string.atoi(self.sn.sn[3:])
             self.des_lineedit.setText(self.sn.get_sn())
-            print "machine clear"
-
+            print "machine change"
 
     def sync_sn_str(self):
         self.mesh_change_sync()
@@ -236,23 +222,23 @@ class sn_ui(QFrame):
         new_data = new_data.replace('-','')
         new_data = new_data.replace(' ','')
         print new_data,self.sn.date
-        if new_data != self.sn.date:
-            self.sn.date  = new_data
-            self.sn.number= 0
+        if new_data[0:4] != self.sn.date[0:4]:
+            self.sn.date   = new_data
+            self.sn.number = 0
             self.des_lineedit.setText(self.sn.get_sn())
             print "date clear"
 
     def config_data_sync(self):
         self.sync_sn_str()
         self.des_lineedit.setText(self.sn.get_sn())
+        line_index = string.atoi(str(self.line_type_combo.currentText()),10)
         if self.config != None:
             self.config.set('SN', 'date'   , self.sn.date    )
             self.config.set('SN', 'machine', self.sn.machine )
-            self.config.set('SN', 'number' , self.sn.number  )
             self.config.set('SN', 'mesh'   , self.sn.mesh    )
             self.config.set('SN', 'factory', self.sn.factory )
             self.config.set('SN', 'ccm',     self.sn.ccm     )
-            self.config.set('SN', 'sn'     , self.sn.get_sn())
+            self.config.set('SN', 'sn%d' % line_index , self.sn.get_sn())
 
             self.config.write(open(self.config_file_name,"w"))
 
