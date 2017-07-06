@@ -81,7 +81,7 @@ class ComSetting(QDialog):
             self.tag_frame.com4_lable.setText(u"标签4:%s" % com4_str)
 
     def clear_text(self):
-        self.conf_frame.config_data_sync()
+        # self.conf_frame.config_data_sync()
         self.close()
 
     @staticmethod

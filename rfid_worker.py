@@ -125,7 +125,7 @@ class MeshStatus(QObject):
             self.mesh_status = MESH_SET_FAIL
             return self.mesh_status
 
-        if  max_s == TAG_CHECK_FAIL and min_s == TAG_CHECK_FAIL:
+        if  max_s <= TAG_CHECK_FAIL and min_s >= TAG_SET_OK:
             self.mesh_status = MESH_CHECK_SHOW
             return self.mesh_status
 

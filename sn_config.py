@@ -17,7 +17,7 @@ import ConfigParser
 
 class sn_data():
     def __init__(self):
-        self.date      = "1707"
+        self.date      = "1706"
         self.machine   = "01"
         self.number    = 0
         self.mesh      = "01"
@@ -139,16 +139,13 @@ class sn_ui(QFrame):
         self.ccm_type_combo.currentIndexChanged.connect(self.ccm_change_sync)
 
     def sync_sn_update(self):
-        self.sn.date    = self.config.get('SN', 'date'    )
         self.sn.machine = self.config.get('SN', 'machine' )
         self.line_type_combo.setCurrentIndex(string.atoi(self.sn.machine)-1)
         line_index = string.atoi(str(self.line_type_combo.currentText()),10)
 
         if self.sn.machine != '':
             self.sn.sn      = self.config.get('SN', 'sn%d' % line_index )
-            print self.sn.sn
-            self.sn.number  = string.atoi(self.sn.sn[3:])
-            print self.sn.number
+            self.sn.number  = string.atoi(self.sn.sn[3:],16)
             self.sn.mesh    = self.config.get('SN', 'mesh'    )
             self.sn.factory = self.config.get('SN', 'factory' )
             self.sn.ccm     = self.config.get('SN', 'ccm'     )
@@ -173,7 +170,6 @@ class sn_ui(QFrame):
         self.des_lineedit.setText(self.sn.get_sn())
 
     def mesh_change_sync(self):
-        new_data = ''
         mesh_str = unicode(self.mesh_type_combo.currentText())
         if mesh_str == u'0x01:复合滤网\PM2.5滤网':
             new_data = '01'
@@ -185,28 +181,31 @@ class sn_ui(QFrame):
             new_data = '04'
         if mesh_str == u'0xFF:没有标签':
             new_data = 'FF'
+        if new_data != self.sn.mesh:
+            self.sn.mesh = new_data
 
     def ccm_change_sync(self):
-        new_data = ''
         ccm_str = unicode(self.ccm_type_combo.currentText())
         if ccm_str == u'0x01:20000':
             new_data = '01'
         if ccm_str == u'0x02:40000':
             new_data = '02'
+        if new_data != self.sn.ccm:
+            self.sn.ccm = new_data
 
     def factory_change_sync(self):
-        new_data = ''
         new_data = str(self.manufacturer_lineedit.text())
+        if new_data != self.sn.factory:
+            self.sn.factory = new_data
+
 
     def line_change_sync(self):
-        new_data = ''
         new_data = str(self.line_type_combo.currentText())
-        print new_data,self.sn.machine
         if new_data != self.sn.machine:
             self.sn.machine = new_data
             line_index = string.atoi(str(self.line_type_combo.currentText()),10)
             self.sn.sn      = self.config.get('SN', 'sn%d' % line_index )
-            self.sn.number  = string.atoi(self.sn.sn[3:])
+            self.sn.number  = string.atoi(self.sn.sn[3:],16)
             self.des_lineedit.setText(self.sn.get_sn())
             print "machine change"
 
@@ -216,14 +215,13 @@ class sn_ui(QFrame):
         self.factory_change_sync()
         self.line_change_sync()
 
-        new_data = ''
         new_data = str(self.time_lineedit.text())
         new_data = new_data[2:]
         new_data = new_data.replace('-','')
         new_data = new_data.replace(' ','')
-        print new_data,self.sn.date
+        if new_data!= self.sn.date:
+            self.sn.date = new_data
         if new_data[0:4] != self.sn.date[0:4]:
-            self.sn.date   = new_data
             self.sn.number = 0
             self.des_lineedit.setText(self.sn.get_sn())
             print "date clear"
@@ -232,6 +230,7 @@ class sn_ui(QFrame):
         self.sync_sn_str()
         self.des_lineedit.setText(self.sn.get_sn())
         line_index = string.atoi(str(self.line_type_combo.currentText()),10)
+
         if self.config != None:
             self.config.set('SN', 'date'   , self.sn.date    )
             self.config.set('SN', 'machine', self.sn.machine )
