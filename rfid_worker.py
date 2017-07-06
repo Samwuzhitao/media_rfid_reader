@@ -121,11 +121,11 @@ class MeshStatus(QObject):
             self.mesh_status = MESH_SET_OK
             return self.mesh_status
 
-        if  max_s == TAG_SET_FAIL :
+        if  max_s == TAG_SET_FAIL and min_s == TAG_SET_OK:
             self.mesh_status = MESH_SET_FAIL
             return self.mesh_status
 
-        if  max_s <= TAG_CHECK_FAIL and min_s >= TAG_SET_OK:
+        if  max_s == TAG_CHECK_FAIL and min_s == TAG_CHECK_FAIL:
             self.mesh_status = MESH_CHECK_SHOW
             return self.mesh_status
 
@@ -455,7 +455,7 @@ class ComWork(QDialog):
         if data[2:4] == '0D':
             if data[4:30] == self.conf_frame.sn.get_tag():
                 result_str = u"验证标签TAG OK"
-                self.mesh_s.update_tag_status(ser_index,TAG_CHECK_OK)
+                self.mesh_s.update_tag_status(ser_index,TAG_SET_OK)
             else:
                 result_str = u"验证标签TAG FAIL"
                 self.mesh_s.update_tag_status(ser_index,TAG_CHECK_FAIL)
