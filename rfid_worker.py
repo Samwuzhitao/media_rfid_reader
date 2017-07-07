@@ -226,6 +226,8 @@ class ComWork(QDialog):
         save_time = time.strftime('%Y%m%d',time.localtime(time.time()))
         self.excel_file = xlwt.Workbook()
         self.excel_sheet = self.excel_file.add_sheet('sheet1',cell_overwrite_ok=True)
+        first_col=self.excel_sheet.col(0)       #xlwt中是行和列都是从0开始计算的
+        first_col.width=400*14
         self.excel_sheet.write(0,0,u'时间')
         self.excel_sheet.write(0,1,u"产线号")
         self.excel_sheet.write(0,2,u"滤网类型")
