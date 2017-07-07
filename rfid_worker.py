@@ -220,7 +220,7 @@ class ComWork(QDialog):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
-        self.timer.start(500)
+        self.timer.start(200)
 
     def export_excel_data(self):
         save_time = time.strftime('%Y%m%d',time.localtime(time.time()))
