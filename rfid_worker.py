@@ -521,6 +521,7 @@ class ComWork(QDialog):
         comsetting_dialog = ComWork(parent)
         result = comsetting_dialog.exec_()
         comsetting_dialog.conf_frame.config_data_sync()
+        comsetting_dialog.timer.stop()
         comsetting_dialog.export_excel_data()
         for item in comsetting_dialog.ser_list:
             if comsetting_dialog.monitor_dict.has_key(item):
