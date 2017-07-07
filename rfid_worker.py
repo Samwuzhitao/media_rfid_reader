@@ -457,8 +457,16 @@ class ComWork(QDialog):
                 result_str = u"验证标签TAG OK"
                 self.mesh_s.update_tag_status(ser_index,TAG_SET_OK)
             else:
-                result_str = u"验证标签TAG FAIL"
-                self.mesh_s.update_tag_status(ser_index,TAG_CHECK_FAIL)
+                if data[4:30] == '0'*26:
+                    self.mesh_s.update_tag_status(ser_index,TAG_SET_TAG)
+                    self.mesh_s.set_tag_count = self.mesh_s.set_tag_count + 1
+                    if self.mesh_s.set_tag_count > 5:
+                        self.mesh_s.update_tag_status(ser_index,TAG_SET_FAIL)
+                        self.mesh_s.set_tag_count = 0
+                    result_str = u"设置标签TAG FAIL"
+                else:
+                    result_str = u"验证标签TAG FAIL"
+                    self.mesh_s.update_tag_status(ser_index,TAG_CHECK_FAIL)
 
         # 解析其他结果的返回
         if data[2:4] == '02':
