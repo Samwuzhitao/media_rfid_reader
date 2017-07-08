@@ -164,7 +164,15 @@ class MeshStatus(QObject):
                 self.tag_status = [TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT]
 
         if mesh_status == MESH_CHECK_SHOW :
-            send_cmd_name = "BEEP3"
+            if self.set_beep_count == 0:
+                send_cmd_name = "BEEP3"
+            else:
+                send_cmd_name = None
+            self.set_beep_count = self.set_beep_count + 1
+            if self.set_beep_count >= 3:
+                self.set_beep_count = 0
+                self.set_tag_count  = [0,0,0,0]
+                self.tag_status = [TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT]
 
         if send_cmd_name:
             return send_cmd_name,self.cmd_dict[send_cmd_name]
@@ -464,6 +472,9 @@ class ComWork(QDialog):
                     if self.mesh_s.set_tag_count[ser_index] >= 5:
                         self.mesh_s.update_tag_status(ser_index,TAG_SET_FAIL)
                     result_str = u"设置标签TAG FAIL"
+                    set_tag_count_str =  "SET_COUNT:%d" % (self.mesh_s.set_tag_count[ser_index])
+                    print set_tag_count_str,
+                    log_str = log_str + ' ' + set_tag_count_str
                 else:
                     result_str = u"验证标签TAG FAIL"
                     self.mesh_s.update_tag_status(ser_index,TAG_CHECK_FAIL)
@@ -485,9 +496,9 @@ class ComWork(QDialog):
                 if self.mesh_s.set_tag_count[ser_index] >= 5:
                     self.mesh_s.update_tag_status(ser_index,TAG_SET_FAIL)
                 result_str = u"设置标签TAG FAIL"
-        set_tag_count_str =  "SET_TAG_COUNT[%d]:%d" % (ser_index,self.mesh_s.set_tag_count[ser_index])
-        print set_tag_count_str,
-        log_str = log_str + set_tag_count_str
+                set_tag_count_str =  "SET_COUNT:%d" % (self.mesh_s.set_tag_count[ser_index])
+                print set_tag_count_str,
+                log_str = log_str + ' ' + set_tag_count_str
         print result_str
         logging.debug( u"%s %s" % (log_str,result_str) )
 
