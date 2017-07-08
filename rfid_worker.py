@@ -512,11 +512,14 @@ class ComWork(QDialog):
         self.ser_list.append(port3)
         self.ser_list.append(port4)
         print self.ser_list
+        i = 0
         for item in self.ser_list:
             ser = None
+            i = i + 1
             try:
                 ser = serial.Serial( item, 115200)
             except serial.SerialException:
+                QMessageBox.critical(self,u"错误",u"创建 标签%d:%s 监听线程失败! \r\n提示：请检查设备是否接上或者被占用" % (i,item))
                 pass
             if ser:
                 self.monitor_dict[item] = ComMonitor(ser)
@@ -525,8 +528,6 @@ class ComWork(QDialog):
                         SIGNAL('r_cmd_message(QString,QString)'),
                         self.uart_cmd_decode)
                 self.monitor_dict[item].start()
-            else:
-                print u"创建串口监听线程! %s 失败，请检查设备是否接上或者更改变" % item
 
         self.conf_frame.sn.machine = self.config.get('SN', 'machine' )
         self.conf_frame.sn.mesh    = self.config.get('SN', 'mesh'    )
