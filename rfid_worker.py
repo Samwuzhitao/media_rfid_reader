@@ -62,8 +62,7 @@ class MeshStatus(QObject):
         self.tag_status_list = []
         self.tag_index_list  = [0,0,0,0]
         self.tag_status      = [TAG_IDLE,TAG_IDLE,TAG_IDLE,TAG_IDLE]
-        # self.tag_old_status  = [TAG_IDLE,TAG_IDLE,TAG_IDLE,TAG_IDLE]
-        self.set_tag_count  = 0
+        self.set_tag_count   = [0,0,0,0]
         self.set_beep_count = 0
         self.connect_cmd    = "5A 02 0D 01 0E CA"
         self.disconnect_cmd = "5A 02 CC 01 CF CA"
@@ -154,7 +153,15 @@ class MeshStatus(QObject):
             send_cmd_name = "SET_TAG"
 
         if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL :
-            send_cmd_name = "BEEP1"
+            if self.set_beep_count == 0:
+                send_cmd_name = "BEEP1"
+            else:
+                send_cmd_name = None
+            self.set_beep_count = self.set_beep_count + 1
+            if self.set_beep_count >= 3:
+                self.set_beep_count = 0
+                self.set_tag_count  = [0,0,0,0]
+                self.tag_status = [TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT]
 
         if mesh_status == MESH_CHECK_SHOW :
             send_cmd_name = "BEEP3"
@@ -220,7 +227,7 @@ class ComWork(QDialog):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.uart_auto_send_script)
-        self.timer.start(200)
+        self.timer.start(300)
 
     def export_excel_data(self):
         save_time = time.strftime('%Y%m%d',time.localtime(time.time()))
@@ -384,21 +391,12 @@ class ComWork(QDialog):
 
         if mesh_status == MESH_SET_OK or mesh_status == MESH_SET_FAIL  or \
            mesh_status == MESH_CHECK_SHOW:
-            self.mesh_s.set_beep_count = self.mesh_s.set_beep_count + 1
-            i = 0
-            if self.mesh_s.set_beep_count > 3:
-                for item in self.ser_list:
-                    self.mesh_s.update_tag_status(i,TAG_MOVE_OUT)
-                    i = i + 1
-                self.mesh_s.set_beep_count = 0
-
             i = 0
             for item in self.ser_list:
                 if self.monitor_dict.has_key(item):
                     if self.monitor_dict[item].com.isOpen() == True:
-                        if self.mesh_s.set_beep_count == 0:
-                            if send_cmd:
-                                self.monitor_dict[item].com.write(send_cmd)
+                        if send_cmd:
+                            self.monitor_dict[item].com.write(send_cmd)
                 i = i + 1
 
             if mesh_status == MESH_SET_OK :
@@ -425,7 +423,7 @@ class ComWork(QDialog):
 
         mesh_status = self.mesh_s.mesh_status
 
-        log_str = u"[%s]: %s " % (port,data)
+        log_str = u"[%s]: %s" % (port,data)
         result_str = ''
         print log_str,
 
@@ -435,6 +433,7 @@ class ComWork(QDialog):
             if item == port:
                 ser_index = i
             i = i + 1
+        #
 
         # 解析读取UID指令对应的返回
         if data[2:4] == '06': # 读取UID指令
@@ -461,10 +460,9 @@ class ComWork(QDialog):
             else:
                 if data[4:30] == '0'*26:
                     self.mesh_s.update_tag_status(ser_index,TAG_SET_TAG)
-                    self.mesh_s.set_tag_count = self.mesh_s.set_tag_count + 1
-                    if self.mesh_s.set_tag_count > 5:
+                    self.mesh_s.set_tag_count[ser_index] = self.mesh_s.set_tag_count[ser_index] + 1
+                    if self.mesh_s.set_tag_count[ser_index] >= 5:
                         self.mesh_s.update_tag_status(ser_index,TAG_SET_FAIL)
-                        self.mesh_s.set_tag_count = 0
                     result_str = u"设置标签TAG FAIL"
                 else:
                     result_str = u"验证标签TAG FAIL"
@@ -483,11 +481,13 @@ class ComWork(QDialog):
                 result_str = u"设置标签TAG OK"
             if data[4:8] == '2D04': # 设置标签TAG FAIL
                 self.mesh_s.update_tag_status(ser_index,TAG_SET_TAG)
-                self.mesh_s.set_tag_count = self.mesh_s.set_tag_count + 1
-                if self.mesh_s.set_tag_count > 5:
+                self.mesh_s.set_tag_count[ser_index] = self.mesh_s.set_tag_count[ser_index] + 1
+                if self.mesh_s.set_tag_count[ser_index] >= 5:
                     self.mesh_s.update_tag_status(ser_index,TAG_SET_FAIL)
-                    self.mesh_s.set_tag_count = 0
                 result_str = u"设置标签TAG FAIL"
+        set_tag_count_str =  "SET_TAG_COUNT[%d]:%d" % (ser_index,self.mesh_s.set_tag_count[ser_index])
+        print set_tag_count_str,
+        log_str = log_str + set_tag_count_str
         print result_str
         logging.debug( u"%s %s" % (log_str,result_str) )
 
