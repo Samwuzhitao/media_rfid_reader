@@ -37,7 +37,7 @@ class sn_data():
 
     def get_tag(self):
         sn = self.get_sn()
-        tag = sn + self.date + self.factory + self.mesh + self.ccm + "000000"
+        tag = sn + self.date + self.factory + self.mesh + "00000000"
 
         return tag
 
@@ -73,22 +73,15 @@ class sn_ui(QFrame):
         self.manufacturer_lineedit = QLineEdit(u'01')
         self.mesh_type_label=QLabel(u"滤网类型:")
         self.mesh_type_combo = QComboBox()
-        self.mesh_type_combo.addItems([u'0x01:复合滤网\PM2.5滤网',u'0x02:甲醛滤网',
-            u'0x03:塑料袋NFC标签',u'0x04:非法滤网',u'0xFF:没有标签'])
+        self.mesh_type_combo.addItems([u'0x01:复合滤网\PM2.5滤网',u'0x02:甲醛滤网',u'0x03:塑料袋NFC标签'])
         self.des_label=QLabel(u"序列号  :")
         self.des_lineedit = QLineEdit(u'')
-        self.ccm_type_label=QLabel(u"CCM值  :")
-        self.ccm_type_combo = QComboBox()
-        self.ccm_type_combo.addItems([u'0x01:20000',u'0x02:40000'])
-        self.rev_type_label=QLabel(u"预留数据:")
-        self.rev_lineedit = QLineEdit(u'00 00 00')
         self.time_lineedit = QLineEdit( time.strftime(
             '%Y-%m-%d',time.localtime(time.time())))
+        self.des_lineedit.setReadOnly(True)
 
         if self.mode == 1:
-            self.rev_lineedit.setReadOnly(True)
             self.manufacturer_lineedit.setReadOnly(True)
-            self.des_lineedit.setReadOnly(True)
             self.time_lineedit.setReadOnly(True)
 
         if font_size != None:
@@ -102,10 +95,6 @@ class sn_ui(QFrame):
             self.des_label.setFont(QFont(            "Roman times",font_size,QFont.Bold))
             self.des_lineedit.setFont(QFont(         "Roman times",font_size,QFont.Bold))
             self.time_lineedit.setFont(QFont(        "Roman times",font_size,QFont.Bold))
-            self.ccm_type_label.setFont(QFont(       "Roman times",font_size,QFont.Bold))
-            self.ccm_type_combo.setFont(QFont(       "Roman times",font_size,QFont.Bold))
-            self.rev_type_label.setFont(QFont(       "Roman times",font_size,QFont.Bold))
-            self.rev_lineedit.setFont(QFont(         "Roman times",font_size,QFont.Bold))
 
         g_hbox = QGridLayout()
         g_hbox.addWidget(self.time_label           ,0,0)
@@ -116,10 +105,6 @@ class sn_ui(QFrame):
         g_hbox.addWidget(self.mesh_type_combo      ,2,1)
         g_hbox.addWidget(self.manufacturer_label   ,2,2)
         g_hbox.addWidget(self.manufacturer_lineedit,2,3)
-        g_hbox.addWidget(self.ccm_type_label       ,3,0)
-        g_hbox.addWidget(self.ccm_type_combo       ,3,1)
-        g_hbox.addWidget(self.rev_type_label       ,3,2)
-        g_hbox.addWidget(self.rev_lineedit         ,3,3)
 
         d_hbox = QHBoxLayout()
         d_hbox.addWidget(self.des_label   )
@@ -136,7 +121,6 @@ class sn_ui(QFrame):
 
         self.line_type_combo.currentIndexChanged.connect(self.line_change_sync)
         self.mesh_type_combo.currentIndexChanged.connect(self.mesh_change_sync)
-        self.ccm_type_combo.currentIndexChanged.connect(self.ccm_change_sync)
 
     def sync_sn_update(self):
         self.sn.machine = self.config.get('SN', 'machine' )
@@ -152,15 +136,11 @@ class sn_ui(QFrame):
 
             self.manufacturer_lineedit.setText(self.sn.factory)
             self.mesh_type_combo.setCurrentIndex(string.atoi(self.sn.mesh)-1)
-            self.ccm_type_combo.setCurrentIndex(string.atoi(self.sn.ccm)-1)
 
         if  self.mode == 1:
             mesh_str = unicode(self.mesh_type_combo.currentText())
             self.mesh_type_combo.clear()
             self.mesh_type_combo.addItems([mesh_str])
-            ccm_str = unicode(self.ccm_type_combo.currentText())
-            self.ccm_type_combo.clear()
-            self.ccm_type_combo.addItems([ccm_str])
             line_str = unicode(self.line_type_combo.currentText())
             self.line_type_combo.clear()
             self.line_type_combo.addItems([line_str])
@@ -184,15 +164,6 @@ class sn_ui(QFrame):
         if new_data != self.sn.mesh:
             self.sn.mesh = new_data
 
-    def ccm_change_sync(self):
-        ccm_str = unicode(self.ccm_type_combo.currentText())
-        if ccm_str == u'0x01:20000':
-            new_data = '01'
-        if ccm_str == u'0x02:40000':
-            new_data = '02'
-        if new_data != self.sn.ccm:
-            self.sn.ccm = new_data
-
     def factory_change_sync(self):
         new_data = str(self.manufacturer_lineedit.text())
         if new_data != self.sn.factory:
@@ -211,7 +182,6 @@ class sn_ui(QFrame):
 
     def sync_sn_str(self):
         self.mesh_change_sync()
-        self.ccm_change_sync()
         self.factory_change_sync()
         self.line_change_sync()
 
@@ -236,7 +206,6 @@ class sn_ui(QFrame):
             self.config.set('SN', 'machine', self.sn.machine )
             self.config.set('SN', 'mesh'   , self.sn.mesh    )
             self.config.set('SN', 'factory', self.sn.factory )
-            self.config.set('SN', 'ccm',     self.sn.ccm     )
             self.config.set('SN', 'sn%d' % line_index , self.sn.get_sn())
 
             self.config.write(open(self.config_file_name,"w"))

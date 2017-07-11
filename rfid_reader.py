@@ -28,7 +28,7 @@ class RFIDReader(QWidget):
         self.ser_list      = []
 
         self.showMaximized()
-        self.setWindowTitle(u'滤网RFID标签授权软件 V2.0')
+        self.setWindowTitle(u'滤网RFID标签授权软件 V2.1')
         palette1 = QPalette()
         palette1.setColor(self.backgroundRole(), QColor(85,85,255))
         self.setPalette(palette1)
