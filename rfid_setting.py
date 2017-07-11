@@ -74,11 +74,11 @@ class ComSetting(QDialog):
         if com2_str:
             self.tag_frame.com2_lable.setText(u"标签2:%s" % com2_str)
         com3_str = self.tag_frame.uart_auto_connect(2)
-        if com3_str:
-            self.tag_frame.com3_lable.setText(u"标签3:%s" % com3_str)
-        com4_str = self.tag_frame.uart_auto_connect(3)
-        if com4_str:
-            self.tag_frame.com4_lable.setText(u"标签4:%s" % com4_str)
+        # if com3_str:
+        #     self.tag_frame.com3_lable.setText(u"标签3:%s" % com3_str)
+        # com4_str = self.tag_frame.uart_auto_connect(3)
+        # if com4_str:
+        #     self.tag_frame.com4_lable.setText(u"标签4:%s" % com4_str)
 
     def clear_text(self):
         # self.conf_frame.config_data_sync()
@@ -91,11 +91,11 @@ class ComSetting(QDialog):
         comsetting_dialog.conf_frame.config_data_sync()
         if comsetting_dialog.config != None:
             # if comsetting_dialog.tag_frame.tag.ser_list[0]
-            if len(comsetting_dialog.tag_frame.tag.ser_list) == 4:
+            if len(comsetting_dialog.tag_frame.tag.ser_list) == 2:
                 comsetting_dialog.config.set('serial', 'port1', comsetting_dialog.tag_frame.tag.ser_list[0])
                 comsetting_dialog.config.set('serial', 'port2', comsetting_dialog.tag_frame.tag.ser_list[1])
-                comsetting_dialog.config.set('serial', 'port3', comsetting_dialog.tag_frame.tag.ser_list[2])
-                comsetting_dialog.config.set('serial', 'port4', comsetting_dialog.tag_frame.tag.ser_list[3])
+                # comsetting_dialog.config.set('serial', 'port3', comsetting_dialog.tag_frame.tag.ser_list[2])
+                # comsetting_dialog.config.set('serial', 'port4', comsetting_dialog.tag_frame.tag.ser_list[3])
                 comsetting_dialog.config.write(open(comsetting_dialog.config_file_name,"w"))
 
             for item in comsetting_dialog.tag_frame.tag.ser_list:
