@@ -60,9 +60,9 @@ class MeshStatus(QObject):
         super(MeshStatus, self).__init__(parent)
         self.mesh_status = MESH_IDLE
         self.tag_status_list = []
-        self.tag_index_list  = [0,0,0,0]
-        self.tag_status      = [TAG_IDLE,TAG_IDLE,TAG_IDLE,TAG_IDLE]
-        self.set_tag_count   = [0,0,0,0]
+        self.tag_index_list  = [0,0,0]
+        self.tag_status      = [TAG_IDLE,TAG_IDLE,TAG_IDLE]
+        self.set_tag_count   = [0,0,0]
         self.set_beep_count = 0
         self.connect_cmd    = "5A 02 0D 01 0E CA"
         self.disconnect_cmd = "5A 02 CC 01 CF CA"
@@ -137,9 +137,8 @@ class MeshStatus(QObject):
             return self.mesh_status
 
     def get_cmd(self):
-        self.emit(SIGNAL('sn_update(int,int,int,int)'),
-            self.tag_status[0],self.tag_status[1],
-            self.tag_status[2],self.tag_status[3])
+        self.emit(SIGNAL('sn_update(int,int,int)'),
+            self.tag_status[0],self.tag_status[1],self.tag_status[2],)
 
         send_cmd_name = None
 
@@ -160,8 +159,8 @@ class MeshStatus(QObject):
             self.set_beep_count = self.set_beep_count + 1
             if self.set_beep_count >= 3:
                 self.set_beep_count = 0
-                self.set_tag_count  = [0,0,0,0]
-                self.tag_status = [TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT]
+                self.set_tag_count  = [0,0,0]
+                self.tag_status = [TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT]
 
         if mesh_status == MESH_CHECK_SHOW :
             if self.set_beep_count == 0:
@@ -171,8 +170,8 @@ class MeshStatus(QObject):
             self.set_beep_count = self.set_beep_count + 1
             if self.set_beep_count >= 3:
                 self.set_beep_count = 0
-                self.set_tag_count  = [0,0,0,0]
-                self.tag_status = [TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT]
+                self.set_tag_count  = [0,0,0]
+                self.tag_status = [TAG_MOVE_OUT,TAG_MOVE_OUT,TAG_MOVE_OUT]
 
         if send_cmd_name:
             return send_cmd_name,self.cmd_dict[send_cmd_name]
@@ -286,7 +285,7 @@ class ComWork(QDialog):
         mesh_status = self.mesh_s.get_mesh_status()
         print mesh_status,status
         if mesh_status:
-            logging.debug( u"MESH:%d TAG:[%d %d %d %d]" % (mesh_status,status[0],status[1],status[2],status[3]) )
+            logging.debug( u"MESH:%d TAG:[%d %d %d]" % (mesh_status,status[0],status[1],status[2]) )
 
         # 空闲状态显示
         if mesh_status == MESH_IDLE :
@@ -506,11 +505,9 @@ class ComWork(QDialog):
         port1 = self.config.get('serial', 'port1' )
         port2 = self.config.get('serial', 'port2' )
         port3 = self.config.get('serial', 'port3' )
-        port4 = self.config.get('serial', 'port4' )
         self.ser_list.append(port1)
         self.ser_list.append(port2)
         self.ser_list.append(port3)
-        self.ser_list.append(port4)
         print self.ser_list
         i = 0
         for item in self.ser_list:

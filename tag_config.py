@@ -48,21 +48,13 @@ class tag_ui(QFrame):
         self.led3  = LED(60)
         self.tag.led_list.append(self.led3)
 
-        self.com4_lable = QLabel(u"标签4")
-        self.com4_lable.setFont(QFont("Roman times",16,QFont.Bold))
-        self.com4_lable.setAlignment(Qt.AlignCenter)
-        self.led4  = LED(60)
-        self.tag.led_list.append(self.led4)
-
         c_gbox = QGridLayout()
         c_gbox.addWidget(self.led1       ,0,0)
         c_gbox.addWidget(self.led2       ,0,1)
         c_gbox.addWidget(self.led3       ,0,2)
-        c_gbox.addWidget(self.led4       ,0,3)
         c_gbox.addWidget(self.com1_lable ,1,0)
         c_gbox.addWidget(self.com2_lable ,1,1)
         c_gbox.addWidget(self.com3_lable ,1,2)
-        c_gbox.addWidget(self.com4_lable ,1,3)
 
         self.setFrameStyle(QFrame.StyledPanel|QFrame.Sunken)
         self.setLayout(c_gbox)
