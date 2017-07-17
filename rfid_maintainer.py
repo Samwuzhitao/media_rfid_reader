@@ -161,7 +161,7 @@ class MeshStatus(QObject):
 
         if mesh_status == MESH_CHECK_SHOW :
             if self.set_beep_count == 0:
-                send_cmd_name = "BEEP3"
+                send_cmd_name = "BEEP1"
             else:
                 send_cmd_name = None
             self.set_beep_count = self.set_beep_count + 1
@@ -184,7 +184,7 @@ class ComMaintainer(QDialog):
         self.ComMonitor   = None
         self.mesh_s       = MeshStatus()
 
-        self.setWindowTitle(u"滤网RFID维修")
+        self.setWindowTitle(u"滤网RFID擦除")
         self.showMaximized()
 
         self.e_button   = QPushButton(u"退出")
@@ -203,7 +203,7 @@ class ComMaintainer(QDialog):
         self.conf_frame = sn_ui( 16,1,self.config, self.config_file_name )
         self.tag_frame  = tag_ui( self.config, self.config_file_name )
 
-        self.sw_label   = QLabel(u"滤网RFID标签维修")
+        self.sw_label   = QLabel(u"滤网RFID标签擦除")
         self.sw_label.setFont(QFont("Roman times",40,QFont.Bold))
         self.sw_label.setAlignment(Qt.AlignCenter)
         self.zkxl_label = QLabel(u"版权所有：深圳中科讯联科技股份有限公司")
@@ -213,8 +213,6 @@ class ComMaintainer(QDialog):
         box = QVBoxLayout()
         box.addItem(QSpacerItem(60,60,QSizePolicy.Expanding,QSizePolicy.Minimum))
         box.addWidget(self.sw_label)
-        box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
-        box.addWidget(self.conf_frame)
         box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
         box.addWidget(self.tag_frame)
         box.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
