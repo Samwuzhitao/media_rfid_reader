@@ -20,6 +20,7 @@ from math import *
 from rfid_setting import *
 from login_dialog import *
 from rfid_worker  import *
+from rfid_maintainer import *
 
 class RFIDReader(QWidget):
     def __init__(self, parent=None):
@@ -43,6 +44,11 @@ class RFIDReader(QWidget):
             "QPushButton{border:1px solid rgb(85,85,255);background:rgb(85,85,255)}"
             "QPushButton:hover{border-color:lightgray;}")
         self.p_button.setFont(QFont("Roman times",25,QFont.Bold))
+        self.f_button   = QPushButton(u"3.维修工人操作")
+        self.f_button.setStyleSheet(
+            "QPushButton{border:1px solid rgb(85,85,255);background:rgb(85,85,255)}"
+            "QPushButton:hover{border-color:lightgray;}")
+        self.f_button.setFont(QFont("Roman times",25,QFont.Bold))
 
         self.e_button   = QPushButton(u"退出")
         self.e_button.setFixedSize(120, 50)
@@ -64,6 +70,8 @@ class RFIDReader(QWidget):
         c_hbox.addWidget(self.m_button)
         c_hbox.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
         c_hbox.addWidget(self.p_button)
+        c_hbox.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
+        c_hbox.addWidget(self.f_button)
         c_hbox.addStretch()
         c_hbox.addLayout(e_layout)
         c_hbox.addItem(QSpacerItem(30,30,QSizePolicy.Expanding,QSizePolicy.Minimum))
@@ -83,6 +91,8 @@ class RFIDReader(QWidget):
             self.open_new_session()
         if e.key() == Qt.Key_2:      # 2 键
             self.start_work()
+        if e.key() == Qt.Key_3:      # 3 键
+            self.maintain_start()
 
     def open_new_session(self):
         if login():
@@ -90,6 +100,10 @@ class RFIDReader(QWidget):
 
     def start_work(self):
         ComWork.work_start()
+
+    def maintain_start(self):
+        if login():
+            ComMaintainer.maintain_start()
 
 def login():
     dialog = LoginDialog()

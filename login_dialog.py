@@ -14,7 +14,7 @@ class LoginDialog(QDialog):
         self.zkxl_label = QLabel(u"版权所有：深圳中科讯联科技有限公司")
         self.zkxl_label.setFont(QFont("Roman times",20,QFont.Bold))
         self.zkxl_label.setAlignment(Qt.AlignCenter)
-        self.leName =QLineEdit(self)
+        self.leName =QLineEdit(u'admin')
         self.leName.setPlaceholderText(u'用户名')
 
         self.lePassword =QLineEdit(self)
