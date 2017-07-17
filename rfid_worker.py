@@ -296,14 +296,19 @@ class ComWork(QDialog):
                 i = i + 1
             return
 
-        # 设置卡片 FAIL
-        if mesh_status == MESH_SET_FAIL or mesh_status == MESH_SET_OK :
+        # 设置卡片 OK
+        if mesh_status == MESH_SET_OK :
             i = 0
             for item in status:
-                if status[i] == TAG_SET_FAIL:
-                    self.tag_frame.tag.led_list[i].set_color('red')
-                if status[i] == TAG_SET_OK:
-                    self.tag_frame.tag.led_list[i].set_color('green')
+                self.tag_frame.tag.led_list[i].set_color('green')
+                i = i + 1
+            return
+
+        # 设置卡片 FAIL
+        if mesh_status == MESH_SET_FAIL :
+            i = 0
+            for item in status:
+                self.tag_frame.tag.led_list[i].set_color('red')
                 i = i + 1
             return
 
